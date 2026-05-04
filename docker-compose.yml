@@ -10,14 +10,26 @@ services:
     ports:
       - "5432:5432"
 
-  backend:
-    build: ./backend
-    ports:
-      - "3001:3001"
-    environment:
-      DATABASE_URL: postgresql://postgres:mypassword@db:5432/erp_db
-    depends_on:
-      - db
+  #Eger yerel makinede çalışacaksa
+    #backend:
+    #build: ./backend
+    #ports:
+    # - "3001:3001"
+    #environment:
+    #  DATABASE_URL: postgresql://postgres:mypassword@db:5432/erp_db
+    #depends_on:
+    #  - db
+
+    #Eger bir bulut veritabani kullanilıyorsa
+    services:
+      backend:
+        build: ./backend
+        environment:
+          # Şifreyi direkt yazmak yerine .env'den çekiyoruz
+          DATABASE_URL: ${DATABASE_URL}
+        ports:
+          - "3001:3001"
+
 
   frontend:
     build: ./frontend
