@@ -1,33 +1,37 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../core/database/prisma.service';
 
 @Injectable()
 export class InventoryService {
   constructor(private prisma: PrismaService) {}
 
-  async processBarcodeScan(barkod: string, miktar: number) {
-    // 1. Barkodun sistemdeki varyant karşılığını bul
-    const barkodRecord = await this.prisma.urunBarkod.findUnique({
+  async processScan(barkod: string, miktar: number) {
+    // 1. Önce barkodun hangi varyanta ait olduğunu buluyoruz
+    const barkodKaydi = await this.prisma.urunBarkod.findUnique({
       where: { barkod },
-      include: { varyant: true },
+      include: { 
+        varyant: { 
+          include: { urun: true } // Ürün ismini de göstermek için
+        } 
+      },
     });
 
-    if (!barkodRecord) {
-      throw new NotFoundException(`${barkod} barkoduna ait varyant bulunamadı.`);
+    if (!barkodKaydi) {
+      throw new NotFoundException(`Sistemde ${barkod} barkodlu bir ürün bulunamadı.`);
     }
 
-    // 2. Atomik İşlem (Transaction)
+    // 2. Transaction: Stok artırımı ve Log kaydı eşzamanlı yapılır
     return this.prisma.$transaction(async (tx) => {
-      // Stok miktarını güncelle (increment)
-      const updatedVaryant = await tx.varyant.update({
-        where: { id: barkodRecord.varyantId },
+      // Stok miktarını güncelle
+      const guncellenenVaryant = await tx.varyant.update({
+        where: { id: barkodKaydi.varyantId },
         data: { stokMiktari: { increment: miktar } },
       });
 
-      // Sayım log kaydını oluştur
+      // Sayım logunu oluştur
       const log = await tx.sayimKaydi.create({
         data: {
-          varyantId: barkodRecord.varyantId,
+          varyantId: barkodKaydi.varyantId,
           barkod: barkod,
           miktar: miktar,
           islemTipi: 'SAYIM',
@@ -35,11 +39,33 @@ export class InventoryService {
       });
 
       return {
-        sku: updatedVaryant.sku,
-        yeniStok: updatedVaryant.stokMiktari,
-        islemZamani: log.kayitTarihi,
+        mesaj: "Stok başarıyla güncellendi",
+        urun: barkodKaydi.varyant.urun.modelAdi,
+        sku: guncellenenVaryant.sku,
+        yeniStok: guncellenenVaryant.stokMiktari,
+        islemTarihi: log.kayitTarihi
       };
     });
   }
-}
 
+  async getVaryantHistory(varyantId: string) {
+    return this.prisma.sayimKaydi.findMany({
+      where: { varyantId },
+      orderBy: { kayitTarihi: 'desc' },
+      take: 20 // Son 20 hareket
+    });
+  }
+
+  async getStockSummary() {
+    // Toplam kaç çeşit ayakkabı (varyant) var ve toplam adet ne?
+    const summary = await this.prisma.varyant.aggregate({
+      _sum: { stokMiktari: true },
+      _count: { id: true }
+    });
+    
+    return {
+      toplamVaryantSayisi: summary._count.id,
+      toplamStokAdedi: summary._sum.stokMiktari || 0
+    };
+  }
+}
