@@ -9,3 +9,4 @@ import { PrismaService } from '../../core/database/prisma.service';
 })
 export class InventoryModule {}
 
+
