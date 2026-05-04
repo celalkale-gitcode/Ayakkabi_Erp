@@ -1,32 +1,18 @@
-import { Controller, Get, Post, Body, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body } from '@nestjs/common';
 import { ProductsService } from './products.service';
+import { CreateProductDto } from './dto/create-product.dto';
 
 @Controller('products')
 export class ProductsController {
   constructor(private readonly productsService: ProductsService) {}
 
-  // Yeni bir ürünü, varyantları ve barkodlarıyla birlikte oluşturur
   @Post()
-  async create(@Body() createProductDto: any) {
-    return this.productsService.createFullProduct(createProductDto);
+  create(@Body() dto: CreateProductDto) {
+    return this.productsService.createFullProduct(dto);
   }
 
-  // Tüm ürünleri (varyantlarıyla birlikte) listeler
   @Get()
-  async findAll() {
+  findAll() {
     return this.productsService.findAll();
   }
-
-  // Tek bir ürünü ID ile detaylı getirir
-  @Get(':id')
-  async findOne(@Param('id') id: string) {
-    return this.productsService.findOne(id);
-  }
-
-  // Ürünü siler (onDelete: Cascade sayesinde varyantlar da silinir)
-  @Delete(':id')
-  async remove(@Param('id') id: string) {
-    return this.productsService.remove(id);
-  }
 }
-
