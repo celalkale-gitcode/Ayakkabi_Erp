@@ -1,11 +1,10 @@
-import { Injectable, ConflictException } from '@nestjs/common';
+import { Injectable, ConflictException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../core/database/prisma.service';
 
 @Injectable()
 export class ProductsService {
   constructor(private prisma: PrismaService) {}
 
-  // Ürünü varyantları ve barkodları ile birlikte tek seferde oluşturur
   async createFullProduct(data: any) {
     const existing = await this.prisma.urun.findUnique({ where: { modelKodu: data.modelKodu } });
     if (existing) throw new ConflictException('Bu model kodu zaten kayıtlı.');
@@ -32,7 +31,22 @@ export class ProductsService {
   }
 
   async findAll() {
-    return this.prisma.urun.findMany({ include: { varyantlar: true } });
+    return this.prisma.urun.findMany({ 
+      include: { varyantlar: true },
+      orderBy: { kayitTarihi: 'desc' }
+    });
+  }
+
+  async findOne(id: string) {
+    const urun = await this.prisma.urun.findUnique({
+      where: { id },
+      include: { varyantlar: { include: { barkodlar: true } } }
+    });
+    if (!urun) throw new NotFoundException('Ürün bulunamadı.');
+    return urun;
+  }
+
+  async remove(id: string) {
+    return this.prisma.urun.delete({ where: { id } });
   }
 }
-
