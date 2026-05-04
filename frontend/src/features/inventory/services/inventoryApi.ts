@@ -1,11 +1,10 @@
-import axios from 'axios';
+import { api } from '@/lib/axios';
 
-const api = axios.create({ baseURL: process.env.NEXT_PUBLIC_API_URL });
-
-export const inventoryApi = {
-  postScan: async (barkod: string, miktar: number = 1) => {
-    const response = await api.post('/inventory/scan', { barkod, miktar });
+export const productsApi = {
+  getAll: async () => {
+    const response = await api.get('/products');
     return response.data;
-  }
+  },
 };
+
 
