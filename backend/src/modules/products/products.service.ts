@@ -1,52 +1,34 @@
-import { Injectable, ConflictException, NotFoundException } from '@nestjs/common';
+import { Injectable, ConflictException } from '@nestjs/common';
 import { PrismaService } from '../../core/database/prisma.service';
+import { CreateProductDto } from './dto/create-product.dto';
 
 @Injectable()
 export class ProductsService {
   constructor(private prisma: PrismaService) {}
 
-  async createFullProduct(data: any) {
-    const existing = await this.prisma.urun.findUnique({ where: { modelKodu: data.modelKodu } });
-    if (existing) throw new ConflictException('Bu model kodu zaten kayıtlı.');
+  async createFullProduct(dto: CreateProductDto) {
+    const existing = await this.prisma.urun.findUnique({ where: { modelKodu: dto.modelKodu } });
+    if (existing) throw new ConflictException('Bu model kodu zaten mevcut.');
 
     return this.prisma.urun.create({
       data: {
-        modelAdi: data.modelAdi,
-        modelKodu: data.modelKodu,
-        marka: data.marka,
+        modelAdi: dto.modelAdi,
+        modelKodu: dto.modelKodu,
+        marka: dto.marka,
         varyantlar: {
-          create: data.varyantlar.map((v: any) => ({
+          create: dto.varyantlar.map(v => ({
             renk: v.renk,
             beden: v.beden,
             sku: v.sku,
             stokMiktari: v.stokMiktari || 0,
-            barkodlar: {
-              create: v.barkodlar.map((b: string) => ({ barkod: b }))
-            }
+            barkodlar: { create: v.barkodlar.map(b => ({ barkod: b })) }
           }))
         }
-      },
-      include: { varyantlar: { include: { barkodlar: true } } }
+      }
     });
   }
 
   async findAll() {
-    return this.prisma.urun.findMany({ 
-      include: { varyantlar: true },
-      orderBy: { kayitTarihi: 'desc' }
-    });
-  }
-
-  async findOne(id: string) {
-    const urun = await this.prisma.urun.findUnique({
-      where: { id },
-      include: { varyantlar: { include: { barkodlar: true } } }
-    });
-    if (!urun) throw new NotFoundException('Ürün bulunamadı.');
-    return urun;
-  }
-
-  async remove(id: string) {
-    return this.prisma.urun.delete({ where: { id } });
+    return this.prisma.urun.findMany({ include: { varyantlar: true } });
   }
 }
