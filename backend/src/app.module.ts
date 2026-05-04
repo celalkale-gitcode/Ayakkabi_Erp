@@ -4,11 +4,15 @@ import { ProductsModule } from './modules/products/products.module';
 import { InventoryModule } from './modules/inventory/inventory.module';
 
 @Module({
-  imports: [ProductsModule, InventoryModule],
+  imports: [
+    ProductsModule,  // Ürün ve Varyant yönetimi
+    InventoryModule, // Stok ve Barkod işlemleri
+  ],
   controllers: [],
   providers: [PrismaService],
-  exports: [PrismaService], // Prisma'yı diğer modüller de kullansın diye export ediyoruz
+  exports: [PrismaService], // Diğer modüllerin DB'ye erişebilmesi için export ediyoruz
 })
 export class AppModule {}
+
 
 
