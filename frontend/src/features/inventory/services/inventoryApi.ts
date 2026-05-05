@@ -1,10 +1,8 @@
 import { api } from '@/lib/axios';
 
-export const productsApi = {
-  getAll: async () => {
-    const response = await api.get('/products');
-    return response.data;
-  },
+export const inventoryApi = {
+  scanBarcode: async (barcode: string) => {
+    const res = await api.post('/inventory/scan', { barcode });
+    return res.data;
+  }
 };
-
-
