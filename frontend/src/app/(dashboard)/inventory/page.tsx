@@ -1,76 +1,65 @@
 'use client';
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 import { inventoryApi } from '@/features/inventory/services/inventoryApi';
 import { useInventoryStore } from '@/features/inventory/store/useInventoryStore';
+import BarcodeScanner from '@/features/inventory/components/BarcodeScanner';
 
 export default function InventoryPage() {
-  const [barkod, setBarkod] = useState('');
   const [loading, setLoading] = useState(false);
   const { scannedItems, addScannedItem } = useInventoryStore();
-  const inputRef = useRef<HTMLInputElement>(null);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!barkod) return;
+  const handleScan = async (barcode: string) => {
+    if (loading) return; // Çift okumayı engelle
 
     setLoading(true);
     try {
-      const res = await inventoryApi.scanBarcode(barkod);
-      addScannedItem(res); // Backend'den gelen: { sku, yeniStok, islemTarihi }
-      setBarkod('');
-      inputRef.current?.focus();
+      const result = await inventoryApi.scanBarcode(barcode);
+      addScannedItem(result); 
+      
+      // Telefon titretme (Haptic Feedback) - Kullanıcıya bildirim için harika olur
+      if (navigator.vibrate) navigator.vibrate(100);
+      
     } catch (err: any) {
-      alert(err.response?.data?.message || "Barkod okunamadı!");
+      console.error("Barkod hatası:", err.response?.data?.message);
     } finally {
-      setLoading(false);
+      // Bir sonraki okuma için 1.5 saniye bekle (Art arda aynı ürünü okumaması için)
+      setTimeout(() => setLoading(false), 1500);
     }
   };
 
   return (
-    <div className="max-w-4xl mx-auto p-6">
-      <h1 className="text-2xl font-bold mb-6">Barkodlu Ürün Sayımı</h1>
+    <div className="max-w-md mx-auto p-4 space-y-6">
+      <h1 className="text-xl font-bold text-center">Mobil Stok Sayımı</h1>
       
-      <form onSubmit={handleSubmit} className="mb-8">
-        <input
-          ref={inputRef}
-          type="text"
-          className="w-full p-4 border-2 border-blue-500 rounded-lg text-xl focus:outline-none focus:ring-2 focus:ring-blue-300"
-          placeholder="Barkodu okutun..."
-          value={barkod}
-          onChange={(e) => setBarkod(e.target.value)}
-          autoFocus
-          disabled={loading}
-        />
-      </form>
+      {/* Kamera Modülü */}
+      <BarcodeScanner onScan={handleScan} />
 
-      <div className="bg-white rounded-xl shadow-md overflow-hidden">
-        <table className="w-full text-left">
-          <thead className="bg-gray-50 border-b">
-            <tr>
-              <th className="p-4">SKU</th>
-              <th className="p-4">Yeni Stok</th>
-              <th className="p-4">İşlem Saati</th>
-            </tr>
-          </thead>
-          <tbody>
-            {scannedItems.map((item, index) => (
-              <tr key={index} className="border-b hover:bg-gray-50">
-                <td className="p-4 font-medium">{item.sku}</td>
-                <td className="p-4 text-green-600 font-bold">{item.yeniStok}</td>
-                <td className="p-4 text-gray-500 text-sm">
-                  {new Date(item.islemTarihi).toLocaleTimeString()}
-                </td>
-              </tr>
-            ))}
-            {scannedItems.length === 0 && (
-              <tr>
-                <td colSpan={3} className="p-10 text-center text-gray-400">
-                  Henüz barkod okutulmadı.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+      {/* Durum Göstergesi */}
+      {loading && (
+        <div className="text-center text-blue-600 animate-pulse font-medium">
+          İşleniyor...
+        </div>
+      )}
+
+      {/* Son Okutulanlar Listesi */}
+      <div className="bg-white rounded-xl shadow-lg p-4">
+        <h2 className="font-semibold border-b pb-2 mb-3">Son Sayımlar</h2>
+        <div className="space-y-3 max-h-60 overflow-y-auto">
+          {scannedItems.map((item, idx) => (
+            <div key={idx} className="flex justify-between items-center p-2 bg-slate-50 rounded border">
+              <div>
+                <p className="font-bold text-sm">{item.sku}</p>
+                <p className="text-xs text-gray-500">{new Date(item.islemTarihi).toLocaleTimeString()}</p>
+              </div>
+              <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-bold">
+                Stok: {item.yeniStok}
+              </span>
+            </div>
+          ))}
+          {scannedItems.length === 0 && (
+            <p className="text-center text-gray-400 text-sm py-4">Henüz barkod okutulmadı.</p>
+          )}
+        </div>
       </div>
     </div>
   );
