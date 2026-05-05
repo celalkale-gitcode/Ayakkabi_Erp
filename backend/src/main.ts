@@ -9,7 +9,12 @@ async function bootstrap() {
   const port = process.env.PORT || 3001;
 
   app.setGlobalPrefix('api/v1');
-  app.enableCors();
+  app.enableCors({
+  origin: true, // Şimdilik test için hepsine izin ver
+  methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+  credentials: true,
+});
+
   
   app.useGlobalPipes(new ValidationPipe({ 
     whitelist: true, 
