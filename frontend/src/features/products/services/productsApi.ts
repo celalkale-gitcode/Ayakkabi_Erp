@@ -1,6 +1,6 @@
 // src/features/products/services/productsApi.ts
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://ayakkabi-erp.onrender.com/api/v1';
+const API_URL = process.env.NEXT_PUBLIC_API_URL!;
 
 export const productsApi = {
   // Tüm ürünleri getiren fonksiyon
