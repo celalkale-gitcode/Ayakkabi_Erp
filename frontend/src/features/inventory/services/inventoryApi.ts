@@ -1,4 +1,4 @@
-import { api } from '@/lib/axios';
+import { api/v1 } from '@/lib/axios';
 
 export const inventoryApi = {
   scanBarcode: async (barcode: string) => {
