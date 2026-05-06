@@ -4,10 +4,10 @@ import { useEffect, useState } from 'react';
 import { productsApi } from '@/features/products/services/productsApi';
 
 export default function ProductsPage() {
-  const [products, setProducts] = useState([]);
+  const [products, setProducts] = useState<any[]>([]);
 
   useEffect(() => {
-    productsApi.getAll().then(setProducts);
+    productsApi.getAll().then((data) => setProducts(data || []));
   }, []);
 
   return (
@@ -15,7 +15,7 @@ export default function ProductsPage() {
       <h1 className="text-2xl font-bold mb-6">Ürün Listesi</h1>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {products.map((p: any) => (
+        {products.map((p) => (
           <div key={p.id} className="bg-white p-4 rounded-lg shadow border">
             <h3 className="font-bold text-lg">{p.modelAdi}</h3>
             <p className="text-gray-500 text-sm">Kod: {p.modelKodu}</p>
