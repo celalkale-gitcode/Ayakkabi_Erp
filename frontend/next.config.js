@@ -12,7 +12,6 @@ const nextConfig = {
 
   swcMinify: true,
 
-  output: "standalone", // 🔥 bunu ekle
 };
 
 module.exports = nextConfig;
