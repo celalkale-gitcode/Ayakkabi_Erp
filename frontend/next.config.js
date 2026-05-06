@@ -1,4 +1,4 @@
-/* @type {import('next').NextConfig} */
+/** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
 
@@ -11,6 +11,8 @@ const nextConfig = {
   },
 
   swcMinify: true,
+
+  output: "standalone", // 🔥 bunu ekle
 };
 
 module.exports = nextConfig;
