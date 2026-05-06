@@ -25,14 +25,9 @@ export default function InventoryPage() {
         }
       }
     } catch (err: any) {
-      console.error(
-        "Barkod hatası:",
-        err?.response?.data?.message || err.message
-      );
+      console.error("Barkod hatası:", err?.message);
     } finally {
-      setTimeout(() => {
-        setLoading(false);
-      }, 1200);
+      setTimeout(() => setLoading(false), 1200);
     }
   }, [loading, addScannedItem]);
 
@@ -56,9 +51,9 @@ export default function InventoryPage() {
         </h2>
 
         <div className="space-y-3 max-h-60 overflow-y-auto">
-          {scannedItems.map((item) => (
+          {scannedItems.map((item, idx) => (
             <div
-              key={item.id || item.sku}
+              key={item.sku + idx}
               className="flex justify-between items-center p-2 bg-slate-50 rounded border"
             >
               <div>
