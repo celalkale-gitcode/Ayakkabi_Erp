@@ -1,18 +1,36 @@
-import { Controller, Get, Post, Body } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+} from '@nestjs/common';
+
 import { ProductsService } from './products.service';
+
 import { CreateProductDto } from './dto/create-product.dto';
 
 @Controller('products')
 export class ProductsController {
-  constructor(private readonly productsService: ProductsService) {}
+  constructor(
+    private readonly productsService: ProductsService,
+  ) {}
 
+  // Normal ürün oluşturma
   @Post()
-  create(@Body() dto: CreateProductDto) {
-    return this.productsService.createFullProduct(dto);
+  async create(
+    @Body()
+    dto: CreateProductDto,
+  ) {
+
+    return this.productsService
+      .createFullProduct(dto);
   }
 
+  // Tüm ürünleri listele
   @Get()
-  findAll() {
-    return this.productsService.findAll();
+  async findAll() {
+
+    return this.productsService
+      .findAll();
   }
 }
