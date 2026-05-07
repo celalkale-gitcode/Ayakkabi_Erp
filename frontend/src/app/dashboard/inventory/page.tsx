@@ -1,4 +1,4 @@
- 'use client';
+'use client';
 
 import {
   useState,
@@ -25,9 +25,12 @@ export default function InventoryPage() {
   const [loading, setLoading] =
     useState(false);
 
-  const [missingBarcode,
-    setMissingBarcode] =
-      useState<string | null>(null);
+  const [
+    missingBarcode,
+    setMissingBarcode,
+  ] = useState<string | null>(
+    null,
+  );
 
   const {
     scannedItems,
@@ -60,7 +63,6 @@ export default function InventoryPage() {
           return;
         }
 
-        // Başarılı stok artışı
         addScannedItem(result);
 
         if (
@@ -68,6 +70,7 @@ export default function InventoryPage() {
             'undefined' &&
           navigator.vibrate
         ) {
+
           navigator.vibrate(100);
         }
 
@@ -153,4 +156,4 @@ export default function InventoryPage() {
       )}
     </div>
   );
-}      
+}
