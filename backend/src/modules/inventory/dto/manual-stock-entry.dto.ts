@@ -1,10 +1,19 @@
-import { IsString, IsInt, Min, IsOptional } from 'class-validator';
+import {
+  IsString,
+  IsInt,
+  Min,
+  IsOptional,
+  IsNotEmpty,
+} from 'class-validator';
 
 export class ManualStockEntryDto {
+
   @IsString()
+  @IsNotEmpty()
   barkod: string;
 
   @IsString()
+  @IsNotEmpty()
   urunAdi: string;
 
   @IsOptional()
@@ -12,12 +21,15 @@ export class ManualStockEntryDto {
   marka?: string;
 
   @IsString()
+  @IsNotEmpty()
   renk: string;
 
   @IsString()
+  @IsNotEmpty()
   beden: string;
 
   @IsString()
+  @IsNotEmpty()
   sku: string;
 
   @IsInt()
