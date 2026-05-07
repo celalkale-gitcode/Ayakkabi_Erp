@@ -1,171 +1,170 @@
 import {
   Injectable,
-  NotFoundException,
-  ConflictException,
 } from '@nestjs/common';
 
 import { PrismaService } from '../../core/database/prisma.service';
+
+import { ProductsService } from '../products/products.service';
 
 import { ManualStockEntryDto } from './dto/manual-stock-entry.dto';
 
 @Injectable()
 export class InventoryService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private productsService: ProductsService,
+  ) {}
 
-  // Barkod okutma işlemi
-  async processScan(barkod: string, miktar: number) {
-    const barkodKaydi = await this.prisma.urunBarkod.findUnique({
-      where: { barkod },
-      include: {
-        varyant: {
-          include: {
-            urun: true,
+  // Barkod okutma
+  async processScan(
+    barkod: string,
+    miktar: number,
+  ) {
+
+    const barkodKaydi =
+      await this.prisma.urunBarkod.findUnique({
+        where: {
+          barkod,
+        },
+
+        include: {
+          varyant: {
+            include: {
+              urun: true,
+            },
           },
         },
-      },
-    });
+      });
 
-    // Barkod sistemde yoksa
+    // Barkod bulunamadı
     if (!barkodKaydi) {
       return {
         success: false,
         code: 'PRODUCT_NOT_FOUND',
-        message: 'Barkod sistemde kayıtlı değil.',
+        message:
+          'Barkod sistemde kayıtlı değil.',
         barkod,
       };
     }
 
-    // Barkod bulunduysa stok artır
-    return this.prisma.$transaction(async (tx) => {
-      const guncellenenVaryant = await tx.varyant.update({
-        where: {
-          id: barkodKaydi.varyantId,
-        },
-        data: {
-          stokMiktari: {
-            increment: miktar,
+    // Stok artır
+    return this.prisma.$transaction(
+      async (tx) => {
+
+        const guncellenenVaryant =
+          await tx.varyant.update({
+            where: {
+              id: barkodKaydi.varyantId,
+            },
+
+            data: {
+              stokMiktari: {
+                increment: miktar,
+              },
+            },
+          });
+
+        // Sayım logu
+        await tx.sayimKaydi.create({
+          data: {
+            varyantId:
+              barkodKaydi.varyantId,
+
+            barkod: barkod,
+
+            miktar: miktar,
+
+            islemTipi: 'SAYIM',
           },
-        },
-      });
+        });
 
-      await tx.sayimKaydi.create({
-        data: {
-          varyantId: barkodKaydi.varyantId,
-          barkod: barkod,
-          miktar: miktar,
-          islemTipi: 'SAYIM',
-        },
-      });
-
-      return {
-        success: true,
-        sku: guncellenenVaryant.sku,
-        yeniStok: guncellenenVaryant.stokMiktari,
-      };
-    });
+        return {
+          success: true,
+          sku: guncellenenVaryant.sku,
+          yeniStok:
+            guncellenenVaryant
+              .stokMiktari,
+        };
+      },
+    );
   }
 
-  // Manuel ürün + stok girişi
-  async manualStockEntry(dto: ManualStockEntryDto) {
-    return this.prisma.$transaction(async (tx) => {
+  // Barkod sistemde yoksa manuel ürün oluştur
+  async manualStockEntry(
+    dto: ManualStockEntryDto,
+  ) {
 
-      // SKU kontrolü
-      const existingSku = await tx.varyant.findUnique({
-        where: {
-          sku: dto.sku,
-        },
-      });
-
-      if (existingSku) {
-        throw new ConflictException('Bu SKU zaten mevcut.');
-      }
-
-      // Barkod kontrolü
-      const existingBarcode = await tx.urunBarkod.findUnique({
-        where: {
+    const varyant =
+      await this.productsService
+        .createManualProduct({
           barkod: dto.barkod,
-        },
-      });
-
-      if (existingBarcode) {
-        throw new ConflictException('Bu barkod zaten kayıtlı.');
-      }
-
-      // Ürün oluştur
-      const urun = await tx.urun.create({
-        data: {
-          modelAdi: dto.urunAdi,
-          modelKodu: `MANUAL-${Date.now()}`,
+          urunAdi: dto.urunAdi,
           marka: dto.marka,
-        },
-      });
-
-      // Varyant oluştur
-      const varyant = await tx.varyant.create({
-        data: {
-          urunId: urun.id,
           renk: dto.renk,
           beden: dto.beden,
           sku: dto.sku,
-          stokMiktari: dto.miktar,
-        },
-      });
-
-      // Barkod oluştur
-      await tx.urunBarkod.create({
-        data: {
-          varyantId: varyant.id,
-          barkod: dto.barkod,
-        },
-      });
-
-      // İlk stok hareketi
-      await tx.sayimKaydi.create({
-        data: {
-          varyantId: varyant.id,
-          barkod: dto.barkod,
           miktar: dto.miktar,
-          islemTipi: 'MANUEL_GIRIS',
-        },
-      });
+        });
 
-      return {
-        success: true,
-        message: 'Manuel ürün kaydı oluşturuldu.',
+    // İlk stok hareketi
+    await this.prisma.sayimKaydi.create({
+      data: {
         varyantId: varyant.id,
-        sku: varyant.sku,
-        stok: varyant.stokMiktari,
-      };
+        barkod: dto.barkod,
+        miktar: dto.miktar,
+        islemTipi: 'MANUEL_GIRIS',
+      },
     });
+
+    return {
+      success: true,
+      message:
+        'Manuel ürün kaydı oluşturuldu.',
+
+      varyantId: varyant.id,
+      sku: varyant.sku,
+      stok: varyant.stokMiktari,
+    };
   }
 
   // Varyant geçmişi
-  async getVaryantHistory(varyantId: string) {
+  async getVaryantHistory(
+    varyantId: string,
+  ) {
+
     return this.prisma.sayimKaydi.findMany({
       where: {
         varyantId,
       },
+
       orderBy: {
         kayitTarihi: 'desc',
       },
+
       take: 20,
     });
   }
 
   // Genel stok özeti
   async getStockSummary() {
-    const summary = await this.prisma.varyant.aggregate({
-      _sum: {
-        stokMiktari: true,
-      },
-      _count: {
-        id: true,
-      },
-    });
+
+    const summary =
+      await this.prisma.varyant.aggregate({
+        _sum: {
+          stokMiktari: true,
+        },
+
+        _count: {
+          id: true,
+        },
+      });
 
     return {
-      toplamVaryantSayisi: summary._count.id,
-      toplamStokAdedi: summary._sum.stokMiktari || 0,
+      toplamVaryantSayisi:
+        summary._count.id,
+
+      toplamStokAdedi:
+        summary._sum.stokMiktari || 0,
     };
   }
 }
