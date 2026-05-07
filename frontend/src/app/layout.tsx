@@ -1,12 +1,22 @@
-import type { Metadata } from "next";
-import { Inter } from "next/font/google";
-import "./globals.css";
+import type {
+  Metadata,
+} from 'next';
 
-const inter = Inter({ subsets: ["latin"] });
+import {
+  Inter,
+} from 'next/font/google';
+
+import './globals.css';
+
+const inter = Inter({
+  subsets: ['latin'],
+});
 
 export const metadata: Metadata = {
-  title: "Ayakkabı Stok ERP",
-  description: "Barkodlu Ayakkabı Stok ve Sayım Sistemi",
+  title: 'Ayakkabı Stok ERP',
+
+  description:
+    'Barkodlu Ayakkabı Stok ve Sayım Sistemi',
 };
 
 export default function RootLayout({
@@ -14,11 +24,16 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
+
   return (
     <html lang="tr">
-      <body className={`${inter.className} bg-slate-50 text-slate-900`}>
+
+      <body
+        className={`${inter.className} bg-slate-50 text-slate-900`}
+      >
         {children}
       </body>
+
     </html>
   );
 }
