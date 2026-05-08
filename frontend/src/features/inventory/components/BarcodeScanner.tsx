@@ -16,6 +16,51 @@ interface Props {
   ) => void;
 }
 
+// EAN13 doğrulama
+function isValidEAN13(
+  barcode: string,
+) {
+
+  // 13 hane olmalı
+  if (
+    !/^\d{13}$/.test(
+      barcode,
+    )
+  ) {
+    return false;
+  }
+
+  const digits =
+    barcode
+      .split('')
+      .map(Number);
+
+  const checkDigit =
+    digits[12];
+
+  let sum = 0;
+
+  for (
+    let i = 0;
+    i < 12;
+    i++
+  ) {
+
+    sum +=
+      i % 2 === 0
+        ? digits[i]
+        : digits[i] * 3;
+  }
+
+  const calculated =
+    (10 - (sum % 10)) % 10;
+
+  return (
+    calculated ===
+    checkDigit
+  );
+}
+
 export default function BarcodeScanner({
   onScan,
 }: Props) {
@@ -25,14 +70,23 @@ export default function BarcodeScanner({
       null,
     );
 
+  const lastScannedRef =
+    useRef<string | null>(
+      null,
+    );
+
+  const scanLockRef =
+    useRef(false);
+
   useEffect(() => {
 
     const config = {
+
       fps: 10,
 
       qrbox: {
-        width: 250,
-        height: 150,
+        width: 280,
+        height: 160,
       },
 
       rememberLastUsedCamera: true,
@@ -40,6 +94,10 @@ export default function BarcodeScanner({
       supportedScanTypes: [
         Html5QrcodeScanType
           .SCAN_TYPE_CAMERA,
+      ],
+
+      formatsToSupport: [
+        7, // EAN_13
       ],
     };
 
@@ -50,17 +108,87 @@ export default function BarcodeScanner({
         false,
       );
 
-    scannerRef.current = scanner;
+    scannerRef.current =
+      scanner;
 
     scanner.render(
-      (decodedText) => {
-        onScan(decodedText);
+
+      async (
+        decodedText,
+      ) => {
+
+        // Lock aktifse ignore
+        if (
+          scanLockRef.current
+        ) {
+          return;
+        }
+
+        // Aynı barkod tekrar
+        if (
+          lastScannedRef.current ===
+          decodedText
+        ) {
+          return;
+        }
+
+        // EAN13 validasyonu
+        if (
+          !isValidEAN13(
+            decodedText,
+          )
+        ) {
+
+          console.warn(
+            'Geçersiz EAN13:',
+            decodedText,
+          );
+
+          return;
+        }
+
+        scanLockRef.current =
+          true;
+
+        lastScannedRef.current =
+          decodedText;
+
+        try {
+
+          await onScan(
+            decodedText,
+          );
+
+          if (
+            typeof navigator !==
+              'undefined' &&
+            navigator.vibrate
+          ) {
+
+            navigator.vibrate(
+              80,
+            );
+          }
+
+        } finally {
+
+          setTimeout(() => {
+
+            scanLockRef.current =
+              false;
+
+            lastScannedRef.current =
+              null;
+
+          }, 1500);
+        }
       },
 
       () => {},
     );
 
     return () => {
+
       scannerRef.current
         ?.clear()
         .catch(() => {});
@@ -68,17 +196,17 @@ export default function BarcodeScanner({
   }, [onScan]);
 
   return (
-    <div className="w-full max-w-sm mx-auto bg-black rounded-xl overflow-hidden">
+
+    <div className="w-full max-w-sm mx-auto bg-black rounded-2xl overflow-hidden shadow-lg border">
 
       <div
         id="reader"
-        className="w-full min-h-[250px]"
+        className="w-full min-h-[280px]"
       />
 
-      <p className="text-center text-white text-xs py-2 bg-blue-600">
-        Barkodu ortalayın
-      </p>
+      <div className="bg-blue-600 text-white text-center text-xs py-2 font-medium">
+        EAN13 Barkodu Kameraya Gösterin
+      </div>
     </div>
   );
 }
-
