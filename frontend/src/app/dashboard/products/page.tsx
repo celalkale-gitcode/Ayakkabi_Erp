@@ -185,22 +185,28 @@ export default function ProductsPage() {
                     {/* RENK / BEDEN */}
                     <div className="flex justify-between items-center">
 
-                      <span className="font-medium">
-                        {v.renk} / {v.beden}
-                      </span>
+                      <div className="flex items-center justify-between">
 
-                      <span
-                        className={`
-                          text-xs font-bold px-2 py-1 rounded-full
-                          ${v.stokMiktari > 5
-                            ? 'bg-green-100 text-green-700'
-                            : v.stokMiktari > 0
-                            ? 'bg-yellow-100 text-yellow-700'
-                            : 'bg-red-100 text-red-700'}
-                        `}
-                      >
-                        Stok: {v.stokMiktari}
-                      </span>
+  {/* SOL TARAF: RENK / BEDEN / STOK */}
+  <span className="font-medium text-gray-800">
+    {v.renk} / {v.beden} / (Stok: {v.stokMiktari})
+  </span>
+
+  {/* SAĞ TARAF: RENKLİ BADGE */}
+  <span
+    className={`
+      text-xs font-bold px-2 py-1 rounded-full whitespace-nowrap
+      ${v.stokMiktari > 5
+        ? 'bg-green-100 text-green-700'
+        : v.stokMiktari > 0
+        ? 'bg-yellow-100 text-yellow-700'
+        : 'bg-red-100 text-red-700'}
+    `}
+  >
+    {v.stokMiktari}
+  </span>
+
+</div>
 
                     </div>
 
