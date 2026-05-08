@@ -45,50 +45,33 @@ export default function ProductsPage() {
 
       if (!query.trim()) return products;
 
-      const q =
-        query.toLowerCase();
+      const q = query.toLowerCase();
 
-      return products.filter(
-        (p) => {
+      return products.filter((p) => {
 
-          if (
-            searchMode ===
-            'modelAdi'
-          ) {
-            return p.modelAdi
-              ?.toLowerCase()
-              .includes(q);
-          }
+        if (searchMode === 'modelAdi') {
+          return p.modelAdi
+            ?.toLowerCase()
+            .includes(q);
+        }
 
-          if (
-            searchMode === 'sku'
-          ) {
-            return p.varyantlar?.some(
-              (v) =>
-                v.sku
-                  ?.toLowerCase()
-                  .includes(q),
-            );
-          }
+        if (searchMode === 'sku') {
+          return p.varyantlar?.some((v) =>
+            v.sku?.toLowerCase().includes(q),
+          );
+        }
 
-          if (
-            searchMode ===
-            'barkod'
-          ) {
-            return p.varyantlar?.some(
-              (v) =>
-                v.barkodlar?.some(
-                  (b) =>
-                    b.barkod
-                      ?.toLowerCase()
-                      .includes(q),
-                ),
-            );
-          }
+        if (searchMode === 'barkod') {
+          return p.varyantlar?.some((v) =>
+            v.barkodlar?.some((b) =>
+              b.barkod?.toLowerCase().includes(q),
+            ),
+          );
+        }
 
-          return false;
-        },
-      );
+        return false;
+      });
+
     }, [products, query, searchMode]);
 
   return (
@@ -101,14 +84,10 @@ export default function ProductsPage() {
         <select
           value={searchMode}
           onChange={(e) =>
-            setSearchMode(
-              e.target
-                .value as SearchMode,
-            )
+            setSearchMode(e.target.value as SearchMode)
           }
           className="w-full border rounded-lg px-3 py-2 text-sm"
         >
-
           <option value="modelAdi">
             Ürün adına göre ara
           </option>
@@ -120,7 +99,6 @@ export default function ProductsPage() {
           <option value="barkod">
             Barkoda göre ara
           </option>
-
         </select>
 
         {/* SEARCH INPUT */}
@@ -182,31 +160,27 @@ export default function ProductsPage() {
                     "
                   >
 
-                    {/* RENK / BEDEN */}
-                    <div className="flex justify-between items-center">
+                    {/* RENK / BEDEN + STOK */}
+                    <div className="flex items-center justify-between">
 
-                      <div className="flex items-center justify-between">
+                      {/* SOL */}
+                      <span className="font-medium text-gray-800">
+                        {v.renk} / {v.beden}
+                      </span>
 
-  {/* SOL TARAF: RENK / BEDEN / STOK */}
-  <span className="font-medium text-gray-800">
-    {v.renk} / {v.beden} / (Stok: {v.stokMiktari})
-  </span>
-
-  {/* SAĞ TARAF: RENKLİ BADGE */}
-  <span
-    className={`
-      text-xs font-bold px-2 py-1 rounded-full whitespace-nowrap
-      ${v.stokMiktari > 5
-        ? 'bg-green-100 text-green-700'
-        : v.stokMiktari > 0
-        ? 'bg-yellow-100 text-yellow-700'
-        : 'bg-red-100 text-red-700'}
-    `}
-  >
-    {v.stokMiktari}
-  </span>
-
-</div>
+                      {/* SAĞ - STOK BADGE */}
+                      <span
+                        className={`
+                          text-xs font-bold px-2 py-1 rounded-full whitespace-nowrap
+                          ${v.stokMiktari > 5
+                            ? 'bg-green-100 text-green-700'
+                            : v.stokMiktari > 0
+                            ? 'bg-yellow-100 text-yellow-700'
+                            : 'bg-red-100 text-red-700'}
+                        `}
+                      >
+                        Stok: {v.stokMiktari}
+                      </span>
 
                     </div>
 
@@ -234,6 +208,7 @@ export default function ProductsPage() {
                     </div>
 
                   </div>
+
                 ))}
 
               </div>
@@ -245,7 +220,6 @@ export default function ProductsPage() {
 
         {/* EMPTY STATE */}
         {filteredProducts.length === 0 && (
-
           <div className="text-center text-gray-400 mt-10">
             Ürün bulunamadı
           </div>
