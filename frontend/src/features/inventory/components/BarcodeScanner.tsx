@@ -8,12 +8,13 @@ import {
 import {
   Html5QrcodeScanner,
   Html5QrcodeScanType,
+  Html5QrcodeSupportedFormats,
 } from 'html5-qrcode';
 
 interface Props {
   onScan: (
     barcode: string,
-  ) => void;
+  ) => Promise<void> | void;
 }
 
 // EAN13 doğrulama
@@ -21,12 +22,13 @@ function isValidEAN13(
   barcode: string,
 ) {
 
-  // 13 hane olmalı
+  // Sadece 13 haneli sayı
   if (
     !/^\d{13}$/.test(
       barcode,
     )
   ) {
+
     return false;
   }
 
@@ -40,6 +42,7 @@ function isValidEAN13(
 
   let sum = 0;
 
+  // İlk 12 haneyi hesapla
   for (
     let i = 0;
     i < 12;
@@ -52,11 +55,11 @@ function isValidEAN13(
         : digits[i] * 3;
   }
 
-  const calculated =
+  const calculatedCheckDigit =
     (10 - (sum % 10)) % 10;
 
   return (
-    calculated ===
+    calculatedCheckDigit ===
     checkDigit
   );
 }
@@ -80,8 +83,18 @@ export default function BarcodeScanner({
 
   useEffect(() => {
 
+    // SSR güvenliği
+    if (
+      typeof window ===
+      'undefined'
+    ) {
+
+      return;
+    }
+
     const config = {
 
+      // Daha stabil scan
       fps: 5,
 
       qrbox: {
@@ -96,8 +109,10 @@ export default function BarcodeScanner({
           .SCAN_TYPE_CAMERA,
       ],
 
+      // Sadece EAN13
       formatsToSupport: [
-        7, // EAN_13
+        Html5QrcodeSupportedFormats
+          .EAN_13,
       ],
     };
 
@@ -117,10 +132,11 @@ export default function BarcodeScanner({
         decodedText,
       ) => {
 
-        // Lock aktifse ignore
+        // Scan lock
         if (
           scanLockRef.current
         ) {
+
           return;
         }
 
@@ -129,10 +145,11 @@ export default function BarcodeScanner({
           lastScannedRef.current ===
           decodedText
         ) {
+
           return;
         }
 
-        // EAN13 validasyonu
+        // Geçersiz EAN13
         if (
           !isValidEAN13(
             decodedText,
@@ -159,6 +176,7 @@ export default function BarcodeScanner({
             decodedText,
           );
 
+          // Başarılı vibration
           if (
             typeof navigator !==
               'undefined' &&
@@ -170,8 +188,16 @@ export default function BarcodeScanner({
             );
           }
 
+        } catch (error) {
+
+          console.error(
+            'Scan error:',
+            error,
+          );
+
         } finally {
 
+          // Lock release
           setTimeout(() => {
 
             scanLockRef.current =
@@ -184,15 +210,18 @@ export default function BarcodeScanner({
         }
       },
 
+      // Scan error ignore
       () => {},
     );
 
+    // Cleanup
     return () => {
 
       scannerRef.current
         ?.clear()
         .catch(() => {});
     };
+
   }, [onScan]);
 
   return (
