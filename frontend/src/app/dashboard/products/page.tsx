@@ -30,13 +30,11 @@ export default function ProductsPage() {
     useState('');
 
   useEffect(() => {
-
     productsApi
       .getAll()
       .then((data) =>
         setProducts(data || []),
       );
-
   }, []);
 
   // FILTER ENGINE
@@ -80,7 +78,6 @@ export default function ProductsPage() {
       {/* STICKY TOP BAR */}
       <div className="sticky top-0 z-50 bg-white border-b shadow-sm p-4 space-y-3">
 
-        {/* SEARCH MODE */}
         <select
           value={searchMode}
           onChange={(e) =>
@@ -88,25 +85,14 @@ export default function ProductsPage() {
           }
           className="w-full border rounded-lg px-3 py-2 text-sm"
         >
-          <option value="modelAdi">
-            Ürün adına göre ara
-          </option>
-
-          <option value="sku">
-            SKU'ya göre ara
-          </option>
-
-          <option value="barkod">
-            Barkoda göre ara
-          </option>
+          <option value="modelAdi">Ürün adına göre ara</option>
+          <option value="sku">SKU'ya göre ara</option>
+          <option value="barkod">Barkoda göre ara</option>
         </select>
 
-        {/* SEARCH INPUT */}
         <input
           value={query}
-          onChange={(e) =>
-            setQuery(e.target.value)
-          }
+          onChange={(e) => setQuery(e.target.value)}
           placeholder="Arama yap..."
           className="w-full border rounded-xl px-4 py-2 focus:ring-2 focus:ring-blue-400 outline-none transition"
         />
@@ -120,7 +106,6 @@ export default function ProductsPage() {
           Ürün Listesi
         </h1>
 
-        {/* GRID */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
 
           {filteredProducts.map((p) => (
@@ -134,7 +119,6 @@ export default function ProductsPage() {
               "
             >
 
-              {/* HEADER */}
               <h2 className="font-bold text-lg">
                 {p.modelAdi}
               </h2>
@@ -160,15 +144,14 @@ export default function ProductsPage() {
                     "
                   >
 
-                    {/* RENK / BEDEN + STOK */}
+                    {/* TEK VE TEMİZ FORMAT */}
                     <div className="flex items-center justify-between">
 
-                      {/* SOL */}
                       <span className="font-medium text-gray-800">
-                        {v.renk} / {v.beden}
+                        {v.renk} / {v.beden} / Stok: {v.stokMiktari}
                       </span>
 
-                      {/* SAĞ - STOK BADGE */}
+                      {/* SADECE RENKLİ BADGE */}
                       <span
                         className={`
                           text-xs font-bold px-2 py-1 rounded-full whitespace-nowrap
@@ -179,17 +162,15 @@ export default function ProductsPage() {
                             : 'bg-red-100 text-red-700'}
                         `}
                       >
-                        Stok: {v.stokMiktari}
+                        {v.stokMiktari}
                       </span>
 
                     </div>
 
-                    {/* SKU */}
                     <p className="text-xs text-gray-500 mt-1">
                       SKU: {v.sku}
                     </p>
 
-                    {/* BARKODLAR */}
                     <div className="flex flex-wrap gap-1 mt-2">
 
                       {v.barkodlar?.map((b) => (
@@ -203,6 +184,7 @@ export default function ProductsPage() {
                         >
                           {b.barkod}
                         </span>
+
                       ))}
 
                     </div>
@@ -214,11 +196,11 @@ export default function ProductsPage() {
               </div>
 
             </div>
+
           ))}
 
         </div>
 
-        {/* EMPTY STATE */}
         {filteredProducts.length === 0 && (
           <div className="text-center text-gray-400 mt-10">
             Ürün bulunamadı
