@@ -2,16 +2,21 @@ import {
   Injectable,
 } from '@nestjs/common';
 
-import { PrismaService } from '../../core/database/prisma.service';
+import { PrismaService }
+  from '../../core/database/prisma.service';
 
-import { ProductsService } from '../products/products.service';
+import { ProductsService }
+  from '../products/products.service';
 
-import { ManualStockEntryDto } from './dto/manual-stock-entry.dto';
+import { ManualStockEntryDto }
+  from './dto/manual-stock-entry.dto';
 
 @Injectable()
 export class InventoryService {
+
   constructor(
     private prisma: PrismaService,
+
     private productsService: ProductsService,
   ) {}
 
@@ -23,12 +28,15 @@ export class InventoryService {
 
     const barkodKaydi =
       await this.prisma.urunBarkod.findUnique({
+
         where: {
           barkod,
         },
 
         include: {
+
           varyant: {
+
             include: {
               urun: true,
             },
@@ -36,13 +44,17 @@ export class InventoryService {
         },
       });
 
-    // Barkod bulunamadı
+    // Barkod sistemde yok
     if (!barkodKaydi) {
+
       return {
         success: false,
+
         code: 'PRODUCT_NOT_FOUND',
+
         message:
           'Barkod sistemde kayıtlı değil.',
+
         barkod,
       };
     }
@@ -53,37 +65,51 @@ export class InventoryService {
 
         const guncellenenVaryant =
           await tx.varyant.update({
+
             where: {
               id: barkodKaydi.varyantId,
             },
 
             data: {
+
               stokMiktari: {
                 increment: miktar,
               },
             },
           });
 
-        // Sayım logu
+        // Sayım kaydı oluştur
         await tx.sayimKaydi.create({
+
           data: {
+
             varyantId:
               barkodKaydi.varyantId,
 
-            barkod: barkod,
+            barkod,
 
-            miktar: miktar,
+            miktar,
 
             islemTipi: 'SAYIM',
           },
         });
 
         return {
+
           success: true,
-          sku: guncellenenVaryant.sku,
+
+          sku:
+            guncellenenVaryant.sku,
+
           yeniStok:
             guncellenenVaryant
               .stokMiktari,
+
+          varyantId:
+            guncellenenVaryant.id,
+
+          islemTarihi:
+            new Date(),
         };
       },
     );
@@ -94,45 +120,73 @@ export class InventoryService {
     dto: ManualStockEntryDto,
   ) {
 
+    // Manuel varyant oluştur
     const varyant =
       await this.productsService
         .createManualProduct({
+
           barkod: dto.barkod,
+
           urunAdi: dto.urunAdi,
+
           marka: dto.marka,
+
           renk: dto.renk,
+
           beden: dto.beden,
+
           sku: dto.sku,
+
           miktar: dto.miktar,
         });
 
-    // İlk stok hareketi
+    // İlk stok hareket kaydı
     await this.prisma.sayimKaydi.create({
+
       data: {
-        varyantId: varyant.id,
-        barkod: dto.barkod,
-        miktar: dto.miktar,
-        islemTipi: 'MANUEL_GIRIS',
+
+        varyantId:
+          varyant.id,
+
+        barkod:
+          dto.barkod,
+
+        miktar:
+          dto.miktar,
+
+        islemTipi:
+          'MANUEL_GIRIS',
       },
     });
 
     return {
+
       success: true,
+
       message:
         'Manuel ürün kaydı oluşturuldu.',
 
-      varyantId: varyant.id,
-      sku: varyant.sku,
-      stok: varyant.stokMiktari,
+      varyantId:
+        varyant.id,
+
+      sku:
+        varyant.sku,
+
+      stok:
+        varyant.stokMiktari,
+
+      islemTarihi:
+        new Date(),
     };
   }
 
-  // Varyant geçmişi
+  // Son stok hareketleri
   async getVaryantHistory(
     varyantId: string,
   ) {
 
     return this.prisma.sayimKaydi.findMany({
+
       where: {
         varyantId,
       },
@@ -150,6 +204,7 @@ export class InventoryService {
 
     const summary =
       await this.prisma.varyant.aggregate({
+
         _sum: {
           stokMiktari: true,
         },
@@ -160,6 +215,7 @@ export class InventoryService {
       });
 
     return {
+
       toplamVaryantSayisi:
         summary._count.id,
 
