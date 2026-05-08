@@ -3,43 +3,52 @@ import Link from 'next/link';
 export default function DashboardPage() {
 
   return (
-    <div className="min-h-screen p-6">
 
-      <h1 className="text-2xl font-bold mb-6 text-center">
+    <div className="min-h-screen p-6 bg-slate-50">
+
+      <h1 className="text-3xl font-bold mb-8 text-center">
         Dashboard
       </h1>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-md mx-auto">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 max-w-2xl mx-auto">
 
-        <Link
-          href="/dashboard/products"
-          className="bg-white p-6 rounded-xl shadow hover:shadow-lg transition border text-center"
-        >
+        {/* Ürünler */}
+        <div className="bg-white p-6 rounded-2xl shadow border flex flex-col">
 
-          <h2 className="text-lg font-semibold mb-2">
+          <h2 className="text-xl font-bold mb-2">
             Ürünler
           </h2>
 
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-gray-500 mb-5">
             Tüm ürünleri görüntüle
           </p>
 
-        </Link>
+          <Link
+            href="/dashboard/products"
+            className="mt-auto bg-blue-600 hover:bg-blue-700 transition text-white text-center py-3 rounded-xl font-medium"
+          >
+            Ürün Listesini Göster
+          </Link>
+        </div>
 
-        <Link
-          href="/dashboard/inventory"
-          className="bg-white p-6 rounded-xl shadow hover:shadow-lg transition border text-center"
-        >
+        {/* Stok Sayımı */}
+        <div className="bg-white p-6 rounded-2xl shadow border flex flex-col">
 
-          <h2 className="text-lg font-semibold mb-2">
+          <h2 className="text-xl font-bold mb-2">
             Stok Sayımı
           </h2>
 
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-gray-500 mb-5">
             Barkod ile stok güncelle
           </p>
 
-        </Link>
+          <Link
+            href="/dashboard/inventory"
+            className="mt-auto bg-green-600 hover:bg-green-700 transition text-white text-center py-3 rounded-xl font-medium"
+          >
+            Sayım Ekranını Aç
+          </Link>
+        </div>
 
       </div>
     </div>
