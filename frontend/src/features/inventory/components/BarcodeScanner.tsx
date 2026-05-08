@@ -82,7 +82,7 @@ export default function BarcodeScanner({
 
     const config = {
 
-      fps: 10,
+      fps: 5,
 
       qrbox: {
         width: 280,
