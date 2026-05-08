@@ -37,7 +37,6 @@ export default function ProductsPage() {
       );
   }, []);
 
-  // FILTER ENGINE
   const filteredProducts =
     useMemo(() => {
 
@@ -75,7 +74,7 @@ export default function ProductsPage() {
   return (
     <div className="min-h-screen bg-slate-50">
 
-      {/* STICKY TOP BAR */}
+      {/* TOP BAR */}
       <div className="sticky top-0 z-50 bg-white border-b shadow-sm p-4 space-y-3">
 
         <select
@@ -144,25 +143,11 @@ export default function ProductsPage() {
                     "
                   >
 
-                    {/* TEK VE TEMİZ FORMAT */}
+                    {/* ✔ TEK VE DOĞRU FORMAT */}
                     <div className="flex items-center justify-between">
 
                       <span className="font-medium text-gray-800">
                         {v.renk} / {v.beden} / Stok: {v.stokMiktari}
-                      </span>
-
-                      {/* SADECE RENKLİ BADGE */}
-                      <span
-                        className={`
-                          text-xs font-bold px-2 py-1 rounded-full whitespace-nowrap
-                          ${v.stokMiktari > 5
-                            ? 'bg-green-100 text-green-700'
-                            : v.stokMiktari > 0
-                            ? 'bg-yellow-100 text-yellow-700'
-                            : 'bg-red-100 text-red-700'}
-                        `}
-                      >
-                        {v.stokMiktari}
                       </span>
 
                     </div>
