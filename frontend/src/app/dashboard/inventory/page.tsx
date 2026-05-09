@@ -1,588 +1,160 @@
 'use client';
 
-import {
-  useState,
-  useCallback,
-} from 'react';
-
-import {
-  motion,
-  AnimatePresence,
-} from 'framer-motion';
-
-import {
-  PackageSearch,
-  ScanLine,
-  Plus,
-  RotateCcw,
+import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { 
+  Plus, 
+  Search, 
+  Filter, 
+  Package, 
+  AlertTriangle, 
+  ArrowUpRight, 
+  ArrowDownRight,
+  History,
+  MoreVertical,
+  QrCode,
   Loader2,
+  X
 } from 'lucide-react';
-
-import BarcodeScanner
-  from '@/features/inventory/components/BarcodeScanner';
-
-import ManualProductModal
-  from '@/features/inventory/components/ManualProductModal';
-
-import ScanHistoryList
-  from '@/features/inventory/components/ScanHistoryList';
-
-import { inventoryApi }
-  from '@/features/inventory/services/inventoryApi';
-
-import { useInventoryStore }
-  from '@/features/inventory/store/useInventoryStore';
+import { useInventory } from '@/features/inventory/hooks/useInventory';
+import InventoryTable from '@/features/inventory/components/InventoryTable';
+import InventoryStats from '@/features/inventory/components/InventoryStats';
+import BarcodeScanner from '@/features/inventory/components/BarcodeScanner';
+import { toast } from 'react-hot-toast';
 
 export default function InventoryPage() {
+  const { 
+    items, 
+    loading: initialLoading, 
+    stats, 
+    updateStock, 
+    fetchInventory 
+  } = useInventory();
 
-  const [loading, setLoading] =
-    useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [showScanner, setShowScanner] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [filterCategory, setFilterCategory] = useState('all');
 
-  const [
-    missingBarcode,
-    setMissingBarcode,
-  ] = useState<string | null>(
-    null,
-  );
-
-  const [
-    showUnknownActions,
-    setShowUnknownActions,
-  ] = useState(false);
-
-  const [
-    openManualModal,
-    setOpenManualModal,
-  ] = useState(false);
-
-  const {
-    scannedItems,
-    addScannedItem,
-  } = useInventoryStore();
-
-  // BARKOD OKUT
-  const handleScan = useCallback(
-
-    async (barcode: string) => {
-
-      if (loading) return;
-
+  const handleScan = async (barcode: string) => {
+    try {
       setLoading(true);
-
-      try {
-
-        const result =
-          await inventoryApi
-            .scanBarcode(barcode);
-
-        // BARKOD BULUNAMADI
-        if (
-          result?.code ===
-          'PRODUCT_NOT_FOUND'
-        ) {
-
-          setMissingBarcode(
-            result.barkod,
-          );
-
-          setShowUnknownActions(
-            true,
-          );
-
-          return;
-        }
-
-        // STOK GÜNCELLENDİ
-        if (result?.success) {
-
-          addScannedItem({
-
-            sku:
-              result.sku,
-
-            yeniStok:
-              result.yeniStok,
-
-            islemTarihi:
-              result.islemTarihi,
-          });
-
-          if (
-            typeof navigator !==
-              'undefined' &&
-            navigator.vibrate
-          ) {
-
-            navigator.vibrate(120);
-          }
-        }
-
-      } catch (err: any) {
-
-        console.error(
-          'Barkod hatası:',
-          err?.message,
-        );
-
-      } finally {
-
-        setTimeout(() => {
-
-          setLoading(false);
-
-        }, 1200);
-      }
-    },
-
-    [
-      loading,
-      addScannedItem,
-    ],
-  );
-
-  // MANUEL ÜRÜN EKLE
-  const handleManualCreate =
-    async (data: any) => {
-
-      try {
-
-        const result =
-          await inventoryApi
-            .createManualProduct(
-              data,
-            );
-
-        if (result?.success) {
-
-          addScannedItem({
-
-            sku:
-              result.sku,
-
-            yeniStok:
-              result.stok,
-
-            islemTarihi:
-              result.islemTarihi,
-          });
-
-          // RESET
-          setMissingBarcode(
-            null,
-          );
-
-          setOpenManualModal(
-            false,
-          );
-
-          setShowUnknownActions(
-            false,
-          );
-
-          if (
-            typeof navigator !==
-              'undefined' &&
-            navigator.vibrate
-          ) {
-
-            navigator.vibrate(200);
-          }
-        }
-
-      } catch (err) {
-
-        console.error(err);
-      }
-    };
+      // Barkod okunduğunda doğrudan işlemi yap
+      await updateStock(barcode, 1, 'in');
+      toast.success(`Stok güncellendi: ${barcode}`);
+      await fetchInventory();
+    } catch (error: any) {
+      toast.error(error.message || 'Stok güncellenirken hata oluştu');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
-
-    <div className="
-      min-h-screen
-      bg-gradient-to-b
-      from-slate-50
-      to-slate-100
-      p-4
-    ">
-
-      <div className="
-        max-w-md
-        mx-auto
-        space-y-6
-      ">
-
-        {/* HEADER */}
-        <motion.div
-          initial={{
-            opacity: 0,
-            y: -20,
-          }}
-          animate={{
-            opacity: 1,
-            y: 0,
-          }}
-          className="
-            bg-white
-            rounded-3xl
-            p-5
-            shadow-sm
-            border
-            border-slate-200
-          "
-        >
-
-          <div className="
-            flex
-            items-center
-            gap-3
-          ">
-
-            <div className="
-              w-12
-              h-12
-              rounded-2xl
-              bg-blue-600
-              text-white
-              flex
-              items-center
-              justify-center
-              shadow-lg
-            ">
-
-              <ScanLine size={24} />
-
-            </div>
-
-            <div>
-
-              <h1 className="
-                text-2xl
-                font-extrabold
-                text-slate-800
-              ">
-
-                Mobil Stok Sayımı
-
-              </h1>
-
-              <p className="
-                text-sm
-                text-slate-500
-              ">
-
-                Barkod okut ve stoğu güncelle
-
-              </p>
-
-            </div>
-
-          </div>
-
-        </motion.div>
-
-        {/* BARKOD SCANNER */}
-        <motion.div
-          initial={{
-            opacity: 0,
-            scale: 0.95,
-          }}
-          animate={{
-            opacity: 1,
-            scale: 1,
-          }}
-        >
-
-          <BarcodeScanner
-            onResult={handleScan}
-          />
-
-        </motion.div>
-
-        {/* LOADING */}
-        <AnimatePresence>
-
-          {loading && (
-
-            <motion.div
-              initial={{
-                opacity: 0,
-              }}
-              animate={{
-                opacity: 1,
-              }}
-              exit={{
-                opacity: 0,
-              }}
-              className="
-                bg-white
-                rounded-2xl
-                p-4
-                shadow-sm
-                border
-                border-blue-100
-              "
-            >
-
-              <div className="
-                flex
-                items-center
-                justify-center
-                gap-3
-                text-blue-600
-                font-semibold
-              ">
-
-                <Loader2
-                  size={20}
-                  className="animate-spin"
-                />
-
-                İşleniyor...
-
-              </div>
-
-            </motion.div>
-          )}
-
-        </AnimatePresence>
-
-        {/* BİLİNMEYEN BARKOD */}
-        <AnimatePresence>
-
-          {showUnknownActions &&
-            missingBarcode && (
-
-            <motion.div
-              initial={{
-                opacity: 0,
-                y: 20,
-              }}
-              animate={{
-                opacity: 1,
-                y: 0,
-              }}
-              exit={{
-                opacity: 0,
-                y: 20,
-              }}
-              className="
-                bg-white
-                rounded-3xl
-                shadow-xl
-                border
-                border-slate-200
-                p-5
-                space-y-4
-              "
-            >
-
-              <div className="text-center">
-
-                <div className="
-                  mx-auto
-                  w-14
-                  h-14
-                  rounded-2xl
-                  bg-red-100
-                  text-red-600
-                  flex
-                  items-center
-                  justify-center
-                  mb-3
-                ">
-
-                  <PackageSearch
-                    size={28}
-                  />
-
-                </div>
-
-                <h2 className="
-                  font-bold
-                  text-xl
-                  text-slate-800
-                ">
-
-                  Barkod Bulunamadı
-
-                </h2>
-
-                <p className="
-                  text-sm
-                  text-slate-500
-                  mt-2
-                  break-all
-                ">
-
-                  {missingBarcode}
-
-                </p>
-
-              </div>
-
-              {/* YENİ ÜRÜN */}
-              <button
-                onClick={() => {
-
-                  setOpenManualModal(
-                    true,
-                  );
-                }}
-                className="
-                  w-full
-                  bg-blue-600
-                  hover:bg-blue-700
-                  text-white
-                  py-3.5
-                  rounded-2xl
-                  font-semibold
-                  transition-all
-                  shadow-lg
-                  shadow-blue-100
-                  flex
-                  items-center
-                  justify-center
-                  gap-2
-                "
-              >
-
-                <Plus size={18} />
-
-                Yeni Ürün Ekle
-
-              </button>
-
-              {/* TEKRAR TARA */}
-              <button
-                onClick={() => {
-
-                  setMissingBarcode(
-                    null,
-                  );
-
-                  setShowUnknownActions(
-                    false,
-                  );
-                }}
-                className="
-                  w-full
-                  bg-slate-100
-                  hover:bg-slate-200
-                  text-slate-700
-                  py-3.5
-                  rounded-2xl
-                  font-semibold
-                  transition-all
-                  flex
-                  items-center
-                  justify-center
-                  gap-2
-                "
-              >
-
-                <RotateCcw
-                  size={18}
-                />
-
-                Tekrar Tara
-
-              </button>
-
-              {/* MANUEL EKLE */}
-              <button
-                onClick={() => {
-
-                  setOpenManualModal(
-                    true,
-                  );
-                }}
-                className="
-                  w-full
-                  bg-green-600
-                  hover:bg-green-700
-                  text-white
-                  py-3.5
-                  rounded-2xl
-                  font-semibold
-                  transition-all
-                  shadow-lg
-                  shadow-green-100
-                  flex
-                  items-center
-                  justify-center
-                  gap-2
-                "
-              >
-
-                <Plus size={18} />
-
-                Manuel Ekle
-
-              </button>
-
-            </motion.div>
-          )}
-
-        </AnimatePresence>
-
-        {/* GEÇMİŞ */}
-        <motion.div
-          initial={{
-            opacity: 0,
-            y: 20,
-          }}
-          animate={{
-            opacity: 1,
-            y: 0,
-          }}
-          transition={{
-            delay: 0.1,
-          }}
-        >
-
-          <ScanHistoryList
-            items={scannedItems}
-          />
-
-        </motion.div>
-
-        {/* MODAL */}
-        <AnimatePresence>
-
-          {openManualModal &&
-            missingBarcode && (
-
-            <ManualProductModal
-
-              barkod={
-                missingBarcode
-              }
-
-              onSubmit={
-                handleManualCreate
-              }
-
-              onClose={() => {
-
-                setOpenManualModal(
-                  false,
-                );
-
-                setMissingBarcode(
-                  null,
-                );
-
-                setShowUnknownActions(
-                  false,
-                );
-              }}
-            />
-          )}
-
-        </AnimatePresence>
-
+    <div className="p-4 md:p-8 space-y-8 pb-24">
+      {/* HEADER */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900">Envanter Yönetimi</h1>
+          <p className="text-slate-500 text-sm">Ürün stoklarını ve hareketlerini izleyin.</p>
+        </div>
+        
+        <div className="flex items-center gap-2">
+          <button 
+            onClick={() => setShowScanner(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-all shadow-lg shadow-blue-200"
+          >
+            <QrCode size={20} />
+            <span className="font-medium">Hızlı Tarat</span>
+          </button>
+          
+          <button className="flex items-center gap-2 px-4 py-2 bg-white text-slate-700 border border-slate-200 rounded-xl hover:bg-slate-50 transition-all">
+            <Plus size={20} />
+            <span className="font-medium">Yeni Ürün</span>
+          </button>
+        </div>
       </div>
 
+      {/* STATS SECTION */}
+      <InventoryStats stats={stats} />
+
+      {/* FILTERS & SEARCH */}
+      <div className="flex flex-col md:flex-row gap-4 bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
+          <input 
+            type="text"
+            placeholder="Ürün adı, barkod veya kategori ara..."
+            className="w-full pl-10 pr-4 py-2 bg-slate-50 border-none rounded-xl focus:ring-2 focus:ring-blue-500 transition-all"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
+        
+        <div className="flex items-center gap-2">
+          <button className="p-2 text-slate-500 hover:bg-slate-50 rounded-lg transition-colors">
+            <Filter size={20} />
+          </button>
+          <select 
+            className="bg-slate-50 border-none rounded-xl px-4 py-2 text-slate-600 focus:ring-2 focus:ring-blue-500"
+            value={filterCategory}
+            onChange={(e) => setFilterCategory(e.target.value)}
+          >
+            <option value="all">Tüm Kategoriler</option>
+            <option value="sneaker">Sneaker</option>
+            <option value="bot">Bot</option>
+            <option value="klasik">Klasik</option>
+          </select>
+        </div>
+      </div>
+
+      {/* TABLE SECTION */}
+      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+        <InventoryTable 
+          items={items.filter(item => 
+            item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            item.barcode.includes(searchTerm)
+          )} 
+          loading={initialLoading} 
+        />
+      </div>
+
+      {/* SCANNER MODAL */}
+      <AnimatePresence>
+        {showScanner && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
+              onClick={() => setShowScanner(false)}
+            />
+            
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 20 }}
+              className="relative w-full max-w-lg z-[101]"
+            >
+              {/* Kapatma Butonu Üstte Sağda */}
+              <button 
+                onClick={() => setShowScanner(false)}
+                className="absolute -top-12 right-0 text-white flex items-center gap-2 hover:text-blue-200 transition-colors"
+              >
+                <span className="text-sm font-medium">Kapat</span>
+                <X size={24} />
+              </button>
+
+              {/* Bizim Düzenlediğimiz Profesyonel Scanner Bileşeni */}
+              <BarcodeScanner 
+                onResult={handleScan}
+                onClose={() => setShowScanner(false)}
+              />
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
