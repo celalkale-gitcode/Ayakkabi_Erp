@@ -73,7 +73,7 @@ export default function BarkodScanner({
           videoDevices.length > 0
         ) {
 
-          // Önce arka kamera bul
+          // Arka kamera öncelikli
           const backCamera =
             videoDevices.find(
               (d) =>
@@ -138,7 +138,7 @@ export default function BarkodScanner({
               const barkod =
                 result.getText();
 
-              // Lock aktifse ignore
+              // Lock varsa ignore
               if (
                 scanLockRef.current
               ) {
@@ -168,6 +168,7 @@ export default function BarkodScanner({
               lastScanRef.current =
                 barkod;
 
+              // Vibrate
               if (
                 typeof navigator !==
                   'undefined' &&
@@ -351,7 +352,7 @@ export default function BarkodScanner({
               relative
               w-full
               h-[340px]
-              rounded-2xl
+              rounded-3xl
               overflow-hidden
               bg-black
               border
@@ -371,10 +372,24 @@ export default function BarkodScanner({
               "
             />
 
-            {/* DARK AREA */}
-            <div className="absolute inset-0 bg-black/55" />
+            {/* DARK OVERLAY */}
+            <div className="absolute inset-0 pointer-events-none">
 
-            {/* ACTIVE SCAN FRAME */}
+              {/* TOP */}
+              <div className="absolute top-0 left-0 w-full h-[calc(50%-70px)] bg-black/70" />
+
+              {/* BOTTOM */}
+              <div className="absolute bottom-0 left-0 w-full h-[calc(50%-70px)] bg-black/70" />
+
+              {/* LEFT */}
+              <div className="absolute left-0 top-[calc(50%-70px)] w-[calc(50%-130px)] h-[140px] bg-black/70" />
+
+              {/* RIGHT */}
+              <div className="absolute right-0 top-[calc(50%-70px)] w-[calc(50%-130px)] h-[140px] bg-black/70" />
+
+            </div>
+
+            {/* ACTIVE FRAME */}
             <div
               className="
                 absolute
@@ -387,22 +402,24 @@ export default function BarkodScanner({
                 h-[140px]
 
                 rounded-2xl
-                overflow-hidden
-
                 border-[3px]
                 border-cyan-400
 
                 shadow-[0_0_35px_rgba(34,211,238,0.95)]
+
+                overflow-hidden
               "
             >
 
-              {/* INSIDE BRIGHT AREA */}
+              {/* BRIGHT INSIDE */}
               <div
                 className="
                   absolute
                   inset-0
-                  bg-transparent
+
                   backdrop-brightness-150
+
+                  shadow-[inset_0_0_30px_rgba(255,255,255,0.15)]
                 "
               />
 
@@ -414,11 +431,11 @@ export default function BarkodScanner({
                   top-0
 
                   w-full
-                  h-[2px]
+                  h-[3px]
 
                   bg-red-500
 
-                  shadow-[0_0_15px_red]
+                  shadow-[0_0_16px_red]
 
                   animate-[scanline_2.2s_linear_infinite]
                 "
@@ -427,13 +444,13 @@ export default function BarkodScanner({
             </div>
 
             {/* CORNERS */}
-            <div className="absolute left-[calc(50%-130px)] top-[calc(50%-70px)] w-6 h-6 border-l-4 border-t-4 border-cyan-300 rounded-tl-xl" />
+            <div className="absolute left-[calc(50%-130px)] top-[calc(50%-70px)] w-7 h-7 border-l-4 border-t-4 border-cyan-300 rounded-tl-xl" />
 
-            <div className="absolute right-[calc(50%-130px)] top-[calc(50%-70px)] w-6 h-6 border-r-4 border-t-4 border-cyan-300 rounded-tr-xl" />
+            <div className="absolute right-[calc(50%-130px)] top-[calc(50%-70px)] w-7 h-7 border-r-4 border-t-4 border-cyan-300 rounded-tr-xl" />
 
-            <div className="absolute left-[calc(50%-130px)] bottom-[calc(50%-70px)] w-6 h-6 border-l-4 border-b-4 border-cyan-300 rounded-bl-xl" />
+            <div className="absolute left-[calc(50%-130px)] bottom-[calc(50%-70px)] w-7 h-7 border-l-4 border-b-4 border-cyan-300 rounded-bl-xl" />
 
-            <div className="absolute right-[calc(50%-130px)] bottom-[calc(50%-70px)] w-6 h-6 border-r-4 border-b-4 border-cyan-300 rounded-br-xl" />
+            <div className="absolute right-[calc(50%-130px)] bottom-[calc(50%-70px)] w-7 h-7 border-r-4 border-b-4 border-cyan-300 rounded-br-xl" />
 
           </div>
 
@@ -498,7 +515,7 @@ export default function BarkodScanner({
             }
 
             50% {
-              top: calc(100% - 2px);
+              top: calc(100% - 3px);
             }
 
             100% {
