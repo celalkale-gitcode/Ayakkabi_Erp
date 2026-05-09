@@ -13,7 +13,7 @@ export default function BarkodScanner({
   onClose,
 }: BarkodScannerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const codeReader = useRef<BrowserMultiFormatReader | null>(null);
+  const readerRef = useRef<BrowserMultiFormatReader | null>(null);
   const controlsRef = useRef<any>(null);
 
   const [cameras, setCameras] = useState<MediaDeviceInfo[]>([]);
@@ -21,111 +21,80 @@ export default function BarkodScanner({
   const [isScanning, setIsScanning] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [pulse, setPulse] = useState(false);
-
   const lastScanRef = useRef<string | null>(null);
-  const scanLockRef = useRef(false);
-
-  // 🔊 beep sound
-  const playBeep = () => {
-    try {
-      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-
-      osc.type = 'sine';
-      osc.frequency.value = 880;
-
-      gain.gain.value = 0.1;
-
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-
-      osc.start();
-      osc.stop(ctx.currentTime + 0.1);
-    } catch {}
-  };
+  const lockRef = useRef(false);
 
   useEffect(() => {
-    codeReader.current = new BrowserMultiFormatReader();
+    readerRef.current = new BrowserMultiFormatReader();
 
     BrowserMultiFormatReader.listVideoInputDevices()
       .then((devices) => {
         setCameras(devices);
 
-        const back =
-          devices.find((d) =>
-            d.label?.toLowerCase().includes('back') ||
-            d.label?.toLowerCase().includes('rear')
-          ) || devices[0];
+        const back = devices.find((d) =>
+          d.label?.toLowerCase().includes('back') ||
+          d.label?.toLowerCase().includes('rear')
+        );
 
-        setSelectedCamera(back?.deviceId || '');
+        setSelectedCamera(back?.deviceId || devices[0]?.deviceId || '');
       })
       .catch(() => setError('Kamera listesi alınamadı'));
 
-    return () => stopScanner();
+    return () => stop();
   }, []);
 
-  const startScanner = async () => {
-    if (!videoRef.current || !selectedCamera || !codeReader.current) return;
+  const start = async () => {
+    if (!readerRef.current || !videoRef.current || !selectedCamera) return;
 
     setError(null);
     setIsScanning(true);
 
-    stopScanner();
+    stop();
 
     try {
       controlsRef.current =
-        await codeReader.current.decodeFromVideoDevice(
+        await readerRef.current.decodeFromVideoDevice(
           selectedCamera,
           videoRef.current,
           (result) => {
             if (!result) return;
 
-            const barkod = result.getText();
+            const code = result.getText();
 
-            if (scanLockRef.current) return;
-            if (lastScanRef.current === barkod) return;
+            if (lockRef.current) return;
+            if (lastScanRef.current === code) return;
+            if (!/^\d{13}$/.test(code)) return;
 
-            // QR + Barcode ANY format
-            if (!barkod) return;
+            lockRef.current = true;
+            lastScanRef.current = code;
 
-            scanLockRef.current = true;
-            lastScanRef.current = barkod;
-
-            // 📳 pulse effect
-            setPulse(true);
-            setTimeout(() => setPulse(false), 250);
-
-            // 🔊 sound
-            playBeep();
-
-            // vibration
             navigator.vibrate?.(120);
 
-            onResult(barkod);
+            onResult(code);
 
             setTimeout(() => {
-              scanLockRef.current = false;
+              lockRef.current = false;
               lastScanRef.current = null;
-            }, 1200);
+            }, 1500);
           }
         );
-    } catch (err) {
-      console.error(err);
-      setError('Kamera başlatılamadı');
+    } catch (e) {
+      console.log(e);
+      setError('Kamera açılamadı');
       setIsScanning(false);
     }
   };
 
-  const stopScanner = () => {
+  const stop = () => {
     try {
       controlsRef.current?.stop();
       controlsRef.current = null;
 
       if (videoRef.current?.srcObject) {
-        const stream = videoRef.current.srcObject as MediaStream;
-        stream.getTracks().forEach((t) => t.stop());
+        (videoRef.current.srcObject as MediaStream)
+          .getTracks()
+          .forEach((t) => t.stop());
+
         videoRef.current.srcObject = null;
       }
     } catch {}
@@ -135,16 +104,18 @@ export default function BarkodScanner({
 
   return (
     <div className="w-full flex justify-center">
-      <div className="w-full max-w-sm bg-white rounded-3xl border shadow-2xl overflow-hidden">
+      <div className="w-full max-w-sm bg-white rounded-3xl shadow-2xl overflow-hidden border">
 
         {/* HEADER */}
         <div className="flex justify-between items-center px-4 py-3 bg-slate-50 border-b">
           <div>
-            <h3 className="font-bold">AI Scanner</h3>
-            <p className="text-xs text-slate-500">QR / Barcode Auto Detect</p>
+            <h3 className="font-bold">Barkod Tarayıcı</h3>
+            <p className="text-xs text-slate-500">Kamerayı barkoda yönelt</p>
           </div>
 
-          {onClose && <button onClick={onClose}>✕</button>}
+          {onClose && (
+            <button onClick={onClose}>✕</button>
+          )}
         </div>
 
         {/* CAMERA SELECT */}
@@ -164,39 +135,33 @@ export default function BarkodScanner({
 
         {/* CAMERA AREA */}
         <div className="px-4 pb-4">
-          <div className="relative w-full h-[340px] bg-black rounded-2xl overflow-hidden">
+          <div className="relative w-full h-[340px] rounded-2xl overflow-hidden bg-black">
 
-            {/* VIDEO (AI blur feel) */}
+            {/* VIDEO (CRITICAL FIX) */}
             <video
               ref={videoRef}
               autoPlay
               playsInline
               muted
-              className={`absolute inset-0 w-full h-full object-cover transition-all duration-300 ${
-                pulse ? 'scale-105 blur-[1px]' : 'scale-100'
-              }`}
+              className="absolute inset-0 w-full h-full object-cover"
             />
 
-            {/* DARK MASK */}
-            <div className="absolute inset-0 bg-black/45 pointer-events-none" />
+            {/* DARK OVERLAY */}
+            <div className="absolute inset-0 bg-black/50 pointer-events-none" />
 
-            {/* SCAN ZONE */}
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
+            {/* BLUR SCAN ZONE (iPhone style) */}
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
 
-              <div className={`relative w-[260px] h-[140px] transition-all duration-200 ${
-                pulse ? 'scale-110' : 'scale-100'
-              }`}>
+              <div className="relative w-[260px] h-[140px] rounded-2xl overflow-hidden">
 
-                {/* FRAME */}
-                <div className="absolute inset-0 border-4 border-cyan-400 rounded-2xl shadow-[0_0_35px_cyan]" />
+                {/* clear center */}
+                <div className="absolute inset-0 border-4 border-cyan-400 rounded-2xl shadow-[0_0_30px_cyan]" />
 
-                {/* PULSE GLOW */}
-                {pulse && (
-                  <div className="absolute inset-0 rounded-2xl border-4 border-white animate-ping opacity-50" />
-                )}
+                {/* glow pulse */}
+                <div className="absolute inset-0 animate-pulse bg-cyan-400/10" />
 
-                {/* SCAN LINE */}
-                <div className="absolute w-full h-[3px] bg-red-500 top-1/2 animate-pulse shadow-[0_0_10px_red]" />
+                {/* scan line */}
+                <div className="absolute w-full h-[3px] bg-red-500 animate-[scan_2s_linear_infinite]" />
 
               </div>
 
@@ -207,7 +172,7 @@ export default function BarkodScanner({
         {/* BUTTON */}
         <div className="px-4 pb-4">
           <button
-            onClick={isScanning ? stopScanner : startScanner}
+            onClick={isScanning ? stop : start}
             className={`w-full py-3 rounded-xl font-bold text-white transition ${
               isScanning ? 'bg-red-500' : 'bg-blue-600'
             }`}
@@ -221,6 +186,16 @@ export default function BarkodScanner({
             </p>
           )}
         </div>
+
+        {/* ANIMATION FIX */}
+        <style jsx>{`
+          @keyframes scan {
+            0% { transform: translateY(0%); }
+            50% { transform: translateY(130px); }
+            100% { transform: translateY(0%); }
+          }
+        `}</style>
+
       </div>
     </div>
   );
