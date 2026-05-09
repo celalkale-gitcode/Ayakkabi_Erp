@@ -13,9 +13,7 @@ export default function BarkodScanner({
   onClose,
 }: BarkodScannerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
-
   const codeReader = useRef<BrowserMultiFormatReader | null>(null);
-
   const controlsRef = useRef<any>(null);
 
   const [cameras, setCameras] = useState<MediaDeviceInfo[]>([]);
@@ -26,36 +24,24 @@ export default function BarkodScanner({
   const lastScanRef = useRef<string | null>(null);
   const scanLockRef = useRef(false);
 
-  // INIT ZXing + cameras
   useEffect(() => {
     codeReader.current = new BrowserMultiFormatReader();
 
     BrowserMultiFormatReader.listVideoInputDevices()
       .then((devices) => {
-        const videoDevices = devices.filter(
-          (d) => d.kind === 'videoinput'
-        );
+        setCameras(devices);
 
-        setCameras(videoDevices);
-
-        if (videoDevices.length > 0) {
-          const backCamera = videoDevices.find((d) =>
+        const backCamera =
+          devices.find((d) =>
             d.label?.toLowerCase().includes('back') ||
             d.label?.toLowerCase().includes('rear')
-          );
+          ) || devices[0];
 
-          setSelectedCamera(
-            backCamera?.deviceId || videoDevices[0].deviceId
-          );
-        }
+        setSelectedCamera(backCamera?.deviceId || '');
       })
-      .catch(() => {
-        setError('Kamera listesi alınamadı');
-      });
+      .catch(() => setError('Kamera listesi alınamadı'));
 
-    return () => {
-      stopScanner();
-    };
+    return () => stopScanner();
   }, []);
 
   const startScanner = async () => {
@@ -64,9 +50,13 @@ export default function BarkodScanner({
     setError(null);
     setIsScanning(true);
 
+    stopScanner();
+
     try {
-      // önce eski stream varsa kapat
-      stopScanner();
+      // 🔥 CRITICAL: video autoplay fix
+      videoRef.current.setAttribute('autoplay', 'true');
+      videoRef.current.setAttribute('playsinline', 'true');
+      videoRef.current.muted = true;
 
       controlsRef.current =
         await codeReader.current.decodeFromVideoDevice(
@@ -79,16 +69,12 @@ export default function BarkodScanner({
 
             if (scanLockRef.current) return;
             if (lastScanRef.current === barkod) return;
-
-            // sadece EAN13
             if (!/^\d{13}$/.test(barkod)) return;
 
             scanLockRef.current = true;
             lastScanRef.current = barkod;
 
-            if (navigator.vibrate) {
-              navigator.vibrate(120);
-            }
+            navigator.vibrate?.(120);
 
             onResult(barkod);
 
@@ -115,9 +101,7 @@ export default function BarkodScanner({
         stream.getTracks().forEach((t) => t.stop());
         videoRef.current.srcObject = null;
       }
-    } catch (e) {
-      console.log('stop error', e);
-    }
+    } catch {}
 
     setIsScanning(false);
   };
@@ -130,14 +114,10 @@ export default function BarkodScanner({
         <div className="flex justify-between items-center px-4 py-3 bg-slate-50 border-b">
           <div>
             <h3 className="font-bold">Barkod Tarama</h3>
-            <p className="text-xs text-slate-500">
-              Kamerayı barkoda yönelt
-            </p>
+            <p className="text-xs text-slate-500">Kamerayı barkoda yönelt</p>
           </div>
 
-          {onClose && (
-            <button onClick={onClose}>✕</button>
-          )}
+          {onClose && <button onClick={onClose}>✕</button>}
         </div>
 
         {/* CAMERA SELECT */}
@@ -162,19 +142,25 @@ export default function BarkodScanner({
             {/* VIDEO */}
             <video
               ref={videoRef}
-              className="absolute inset-0 w-full h-full object-cover"
+              autoPlay
+              playsInline
+              muted
+              className="absolute inset-0 w-full h-full object-cover z-0"
             />
 
             {/* DARK MASK */}
-            <div className="absolute inset-0 bg-black/60 pointer-events-none" />
+            <div className="absolute inset-0 bg-black/50 pointer-events-none z-10" />
 
-            {/* SCAN FRAME (SADE VE NET) */}
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+            {/* FRAME */}
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
 
-              <div className="relative w-[260px] h-[140px] border-4 border-cyan-400 rounded-2xl shadow-[0_0_25px_cyan]">
+              <div className="relative w-[260px] h-[140px]">
 
-                {/* scan line */}
-                <div className="absolute w-full h-[3px] bg-red-500 animate-pulse top-1/2" />
+                {/* BORDER */}
+                <div className="absolute inset-0 border-4 border-cyan-400 rounded-2xl shadow-[0_0_30px_cyan]" />
+
+                {/* SCAN LINE */}
+                <div className="absolute w-full h-[3px] bg-red-500 top-1/2 animate-pulse" />
 
               </div>
 
