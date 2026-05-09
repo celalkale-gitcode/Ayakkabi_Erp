@@ -18,7 +18,7 @@
     "clsx": "^2.1.0",
     "tailwind-merge": "^2.2.1",
     "@zxing/browser": "^0.1.5",
-    "@zxing/library": "^0.20.0",
+    "@zxing/library": "^0.21.0",
     "framer-motion": "^11.0.0"
   },
   "devDependencies": {
