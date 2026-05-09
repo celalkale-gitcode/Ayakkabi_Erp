@@ -16,11 +16,9 @@ export default function BarkodScanner({ onResult, onClose }: any) {
 
   useEffect(() => {
     readerRef.current = new BrowserMultiFormatReader();
-
     return () => stop();
   }, []);
 
-  // 🔥 ARKA KAMERA ZORLAMA (FIX)
   const start = async () => {
     try {
       setError(null);
@@ -30,10 +28,10 @@ export default function BarkodScanner({ onResult, onClose }: any) {
       stop();
       setScanning(true);
 
-      // 👉 FORCE BACK CAMERA
+      // 🔥 FORCE BACK CAMERA (fix Android issue)
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
-          facingMode: { ideal: 'environment' }, // <-- CRITICAL FIX
+          facingMode: { ideal: 'environment' },
         },
         audio: false,
       });
@@ -58,17 +56,15 @@ export default function BarkodScanner({ onResult, onClose }: any) {
           lock.current = true;
           last.current = code;
 
-          // 🔊 haptic + feedback
           navigator.vibrate?.(120);
 
-          // optional beep
           try {
             const ctx = new AudioContext();
             const osc = ctx.createOscillator();
-            osc.frequency.value = 800;
+            osc.frequency.value = 850;
             osc.connect(ctx.destination);
             osc.start();
-            osc.stop(ctx.currentTime + 0.1);
+            osc.stop(ctx.currentTime + 0.08);
           } catch {}
 
           onResult(code);
@@ -79,9 +75,9 @@ export default function BarkodScanner({ onResult, onClose }: any) {
           }, 1200);
         }
       );
-    } catch (e: any) {
+    } catch (e) {
       console.error(e);
-      setError('Kamera açılamadı (izin verildi mi?)');
+      setError('Kamera açılamadı');
       setScanning(false);
     }
   };
@@ -90,8 +86,6 @@ export default function BarkodScanner({ onResult, onClose }: any) {
     try {
       streamRef.current?.getTracks().forEach((t) => t.stop());
       streamRef.current = null;
-
-      readerRef.current?.reset?.();
 
       if (videoRef.current) {
         videoRef.current.srcObject = null;
@@ -106,51 +100,51 @@ export default function BarkodScanner({ onResult, onClose }: any) {
       <div className="w-full max-w-sm bg-white rounded-3xl shadow-2xl border overflow-hidden">
 
         {/* HEADER */}
-        <div className="flex justify-between px-4 py-3 bg-slate-50 border-b z-20">
+        <div className="flex justify-between px-4 py-3 bg-slate-50 border-b z-20 relative">
           <div>
             <h3 className="font-bold">AI Barkod Scanner</h3>
             <p className="text-xs text-slate-500">
-              Arka kamera + auto focus aktif
+              Arka kamera + real-time scan
             </p>
           </div>
 
           {onClose && <button onClick={onClose}>✕</button>}
         </div>
 
-        {/* CAMERA AREA */}
+        {/* CAMERA */}
         <div className="px-4 pb-4">
           <div className="relative w-full h-[340px] bg-black rounded-2xl overflow-hidden">
 
-            {/* VIDEO */}
+            {/* VIDEO (FIXED LAYER) */}
             <video
               ref={videoRef}
               autoPlay
               playsInline
               muted
-              className="absolute inset-0 w-full h-full object-cover"
+              className="absolute inset-0 w-full h-full object-cover z-0"
             />
 
-            {/* DARK MASK */}
-            <div className="absolute inset-0 bg-black/50 pointer-events-none" />
+            {/* DARK OVERLAY */}
+            <div className="absolute inset-0 bg-black/55 z-10 pointer-events-none" />
 
-            {/* 🔥 AI STYLE SCAN FRAME (FIXED VISIBILITY) */}
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-50">
+            {/* 🔥 FRAME (FORCED VISIBILITY FIX) */}
+            <div className="absolute inset-0 flex items-center justify-center z-50 pointer-events-none">
 
               <div className="relative w-[260px] h-[140px]">
 
-                {/* glowing frame */}
-                <div className="absolute inset-0 rounded-2xl border-4 border-cyan-400 shadow-[0_0_35px_rgba(34,211,238,0.9)] animate-pulse" />
+                {/* FRAME BORDER */}
+                <div className="absolute inset-0 rounded-2xl border-4 border-cyan-400 shadow-[0_0_40px_rgba(34,211,238,0.95)] animate-pulse" />
 
-                {/* scanning line */}
+                {/* SCAN LINE */}
                 <div
                   className="absolute left-0 w-full h-[3px] bg-red-500"
                   style={{
                     animation: 'scan 1.8s linear infinite',
-                    boxShadow: '0 0 12px red',
+                    boxShadow: '0 0 14px red',
                   }}
                 />
 
-                {/* corner glow */}
+                {/* CORNERS */}
                 <div className="absolute -top-2 -left-2 w-6 h-6 border-l-4 border-t-4 border-cyan-300" />
                 <div className="absolute -top-2 -right-2 w-6 h-6 border-r-4 border-t-4 border-cyan-300" />
                 <div className="absolute -bottom-2 -left-2 w-6 h-6 border-l-4 border-b-4 border-cyan-300" />
