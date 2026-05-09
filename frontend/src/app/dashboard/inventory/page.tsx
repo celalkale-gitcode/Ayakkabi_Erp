@@ -189,9 +189,9 @@ export default function InventoryPage() {
         Mobil Stok Sayımı
       </h1>
 
-      {/* Barkod Kamera */}
+      {/* Barkod Kamera - Değişiklik Burası: onScan -> onResult */}
       <BarcodeScanner
-        onScan={handleScan}
+        onResult={handleScan}
       />
 
       {/* Loading */}
