@@ -13,8 +13,8 @@ export default function BarkodScanner({ onResult, onClose }: Props) {
   const readerRef = useRef<BrowserMultiFormatReader | null>(null);
   const controlsRef = useRef<any>(null);
 
-  const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
   const [deviceId, setDeviceId] = useState('');
+  const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
   const [scanning, setScanning] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -66,7 +66,6 @@ export default function BarkodScanner({ onResult, onClose }: Props) {
             lastRef.current = code;
 
             navigator.vibrate?.(120);
-
             onResult(code);
 
             setTimeout(() => {
@@ -104,17 +103,16 @@ export default function BarkodScanner({ onResult, onClose }: Props) {
       <div className="w-full max-w-sm bg-white rounded-3xl shadow-2xl overflow-hidden border">
 
         {/* HEADER */}
-        <div className="flex justify-between items-center px-4 py-3 bg-slate-50 border-b z-20 relative">
+        <div className="flex justify-between items-center px-4 py-3 bg-slate-50 border-b">
           <div>
             <h3 className="font-bold">Barkod Tarayıcı</h3>
-            <p className="text-xs text-slate-500">Kamerayı ortala</p>
+            <p className="text-xs text-slate-500">Kamerayı hizala</p>
           </div>
-
           {onClose && <button onClick={onClose}>✕</button>}
         </div>
 
         {/* CAMERA SELECT */}
-        <div className="p-3 z-20 relative">
+        <div className="p-3">
           <select
             className="w-full border rounded-xl p-2 text-sm"
             value={deviceId}
@@ -128,31 +126,33 @@ export default function BarkodScanner({ onResult, onClose }: Props) {
           </select>
         </div>
 
-        {/* CAMERA AREA */}
+        {/* CAMERA AREA (FIXED LAYOUT) */}
         <div className="px-4 pb-4">
-          <div className="relative w-full h-[340px] rounded-2xl overflow-hidden bg-black">
 
-            {/* VIDEO (EN ALT KATMAN) */}
+          {/* OUTER WRAPPER (CRITICAL FIX) */}
+          <div className="relative w-full h-[340px] bg-black rounded-2xl overflow-hidden">
+
+            {/* VIDEO (FORCED SIZE FIX) */}
             <video
               ref={videoRef}
               autoPlay
               playsInline
               muted
-              className="absolute inset-0 w-full h-full object-cover z-0"
+              className="block w-full h-full object-cover"
             />
 
-            {/* DARK OVERLAY */}
+            {/* DARK LAYER */}
             <div className="absolute inset-0 bg-black/60 z-10 pointer-events-none" />
 
-            {/* ===== FRAME LAYER (EN ÖNEMLİ KISIM) ===== */}
-            <div className="absolute inset-0 flex items-center justify-center z-30 pointer-events-none">
+            {/* FRAME LAYER (FORCED TOP) */}
+            <div className="absolute inset-0 z-20 flex items-center justify-center pointer-events-none">
 
               <div className="relative w-[260px] h-[140px]">
 
-                {/* OUTLINE FRAME */}
-                <div className="absolute inset-0 border-4 border-cyan-400 rounded-2xl shadow-[0_0_35px_cyan]" />
+                {/* FRAME BORDER */}
+                <div className="absolute inset-0 border-4 border-cyan-400 rounded-2xl shadow-[0_0_30px_cyan]" />
 
-                {/* CORNERS (görsel güçlendirme) */}
+                {/* CORNERS */}
                 <div className="absolute -top-2 -left-2 w-6 h-6 border-l-4 border-t-4 border-cyan-300" />
                 <div className="absolute -top-2 -right-2 w-6 h-6 border-r-4 border-t-4 border-cyan-300" />
                 <div className="absolute -bottom-2 -left-2 w-6 h-6 border-l-4 border-b-4 border-cyan-300" />
@@ -160,6 +160,7 @@ export default function BarkodScanner({ onResult, onClose }: Props) {
 
                 {/* SCAN LINE */}
                 <div className="absolute w-full h-[3px] bg-red-500 animate-[scan_2s_linear_infinite]" />
+
               </div>
 
             </div>
@@ -168,7 +169,7 @@ export default function BarkodScanner({ onResult, onClose }: Props) {
         </div>
 
         {/* BUTTON */}
-        <div className="px-4 pb-4 z-20 relative">
+        <div className="px-4 pb-4">
           <button
             onClick={scanning ? stop : start}
             className={`w-full py-3 rounded-xl font-bold text-white ${
@@ -179,16 +180,18 @@ export default function BarkodScanner({ onResult, onClose }: Props) {
           </button>
 
           {error && (
-            <p className="text-red-500 text-xs mt-2 text-center">{error}</p>
+            <p className="text-red-500 text-xs mt-2 text-center">
+              {error}
+            </p>
           )}
         </div>
 
         {/* ANIMATION */}
         <style jsx>{`
           @keyframes scan {
-            0% { transform: translateY(0px); }
+            0% { transform: translateY(0); }
             50% { transform: translateY(130px); }
-            100% { transform: translateY(0px); }
+            100% { transform: translateY(0); }
           }
         `}</style>
 
