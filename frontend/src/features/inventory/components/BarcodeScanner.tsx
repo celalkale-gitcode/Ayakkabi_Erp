@@ -153,7 +153,7 @@ export default function BarkodScanner({
                 return;
               }
 
-              // EAN13 kontrolü
+              // SADECE EAN13
               if (
                 !/^\d{13}$/.test(
                   barkod,
@@ -209,8 +209,6 @@ export default function BarkodScanner({
   const taramayiDurdur =
     () => {
 
-      codeReader.current.reset();
-
       if (
         videoRef.current
           ?.srcObject
@@ -235,7 +233,21 @@ export default function BarkodScanner({
 
     return () => {
 
-      taramayiDurdur();
+      if (
+        videoRef.current
+          ?.srcObject
+      ) {
+
+        const stream =
+          videoRef.current
+            .srcObject as MediaStream;
+
+        stream
+          .getTracks()
+          .forEach((track) =>
+            track.stop(),
+          );
+      }
     };
 
   }, []);
@@ -359,10 +371,10 @@ export default function BarkodScanner({
               "
             />
 
-            {/* DARK OVERLAY */}
-            <div className="absolute inset-0 bg-black/45" />
+            {/* DARK AREA */}
+            <div className="absolute inset-0 bg-black/55" />
 
-            {/* CENTER FRAME */}
+            {/* ACTIVE SCAN FRAME */}
             <div
               className="
                 absolute
@@ -374,27 +386,27 @@ export default function BarkodScanner({
                 w-[260px]
                 h-[140px]
 
+                rounded-2xl
+                overflow-hidden
+
                 border-[3px]
                 border-cyan-400
 
-                rounded-2xl
-
-                shadow-[0_0_25px_rgba(34,211,238,0.9)]
-
-                overflow-hidden
+                shadow-[0_0_35px_rgba(34,211,238,0.95)]
               "
             >
 
-              {/* Frame inside clear area */}
+              {/* INSIDE BRIGHT AREA */}
               <div
                 className="
                   absolute
                   inset-0
-                  backdrop-brightness-125
+                  bg-transparent
+                  backdrop-brightness-150
                 "
               />
 
-              {/* Animated scan line */}
+              {/* SCAN LINE */}
               <div
                 className="
                   absolute
@@ -406,7 +418,7 @@ export default function BarkodScanner({
 
                   bg-red-500
 
-                  shadow-[0_0_12px_red]
+                  shadow-[0_0_15px_red]
 
                   animate-[scanline_2.2s_linear_infinite]
                 "
@@ -414,7 +426,7 @@ export default function BarkodScanner({
 
             </div>
 
-            {/* Corner Glow */}
+            {/* CORNERS */}
             <div className="absolute left-[calc(50%-130px)] top-[calc(50%-70px)] w-6 h-6 border-l-4 border-t-4 border-cyan-300 rounded-tl-xl" />
 
             <div className="absolute right-[calc(50%-130px)] top-[calc(50%-70px)] w-6 h-6 border-r-4 border-t-4 border-cyan-300 rounded-tr-xl" />
@@ -480,6 +492,7 @@ export default function BarkodScanner({
         {/* STYLE */}
         <style jsx>{`
           @keyframes scanline {
+
             0% {
               top: 0;
             }
