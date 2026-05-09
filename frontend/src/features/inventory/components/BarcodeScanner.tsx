@@ -3,40 +3,37 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { BrowserMultiFormatReader } from '@zxing/browser';
 
-interface BarkodScannerProps {
-  onResult: (barkod: string) => void;
+interface Props {
+  onResult: (code: string) => void;
   onClose?: () => void;
 }
 
-export default function BarkodScanner({
-  onResult,
-  onClose,
-}: BarkodScannerProps) {
+export default function BarkodScanner({ onResult, onClose }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const readerRef = useRef<BrowserMultiFormatReader | null>(null);
   const controlsRef = useRef<any>(null);
 
-  const [cameras, setCameras] = useState<MediaDeviceInfo[]>([]);
-  const [selectedCamera, setSelectedCamera] = useState('');
-  const [isScanning, setIsScanning] = useState(false);
+  const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
+  const [deviceId, setDeviceId] = useState('');
+  const [scanning, setScanning] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const lastScanRef = useRef<string | null>(null);
+  const lastRef = useRef<string | null>(null);
   const lockRef = useRef(false);
 
   useEffect(() => {
     readerRef.current = new BrowserMultiFormatReader();
 
     BrowserMultiFormatReader.listVideoInputDevices()
-      .then((devices) => {
-        setCameras(devices);
+      .then((list) => {
+        setDevices(list);
 
-        const back = devices.find((d) =>
+        const back = list.find((d) =>
           d.label?.toLowerCase().includes('back') ||
           d.label?.toLowerCase().includes('rear')
         );
 
-        setSelectedCamera(back?.deviceId || devices[0]?.deviceId || '');
+        setDeviceId(back?.deviceId || list[0]?.deviceId || '');
       })
       .catch(() => setError('Kamera listesi alınamadı'));
 
@@ -44,29 +41,29 @@ export default function BarkodScanner({
   }, []);
 
   const start = async () => {
-    if (!readerRef.current || !videoRef.current || !selectedCamera) return;
+    if (!readerRef.current || !videoRef.current || !deviceId) return;
 
     setError(null);
-    setIsScanning(true);
+    setScanning(true);
 
     stop();
 
     try {
       controlsRef.current =
         await readerRef.current.decodeFromVideoDevice(
-          selectedCamera,
+          deviceId,
           videoRef.current,
-          (result) => {
-            if (!result) return;
+          (res) => {
+            if (!res) return;
 
-            const code = result.getText();
+            const code = res.getText();
 
             if (lockRef.current) return;
-            if (lastScanRef.current === code) return;
+            if (lastRef.current === code) return;
             if (!/^\d{13}$/.test(code)) return;
 
             lockRef.current = true;
-            lastScanRef.current = code;
+            lastRef.current = code;
 
             navigator.vibrate?.(120);
 
@@ -74,14 +71,14 @@ export default function BarkodScanner({
 
             setTimeout(() => {
               lockRef.current = false;
-              lastScanRef.current = null;
+              lastRef.current = null;
             }, 1500);
           }
         );
     } catch (e) {
       console.log(e);
       setError('Kamera açılamadı');
-      setIsScanning(false);
+      setScanning(false);
     }
   };
 
@@ -99,7 +96,7 @@ export default function BarkodScanner({
       }
     } catch {}
 
-    setIsScanning(false);
+    setScanning(false);
   };
 
   return (
@@ -107,27 +104,25 @@ export default function BarkodScanner({
       <div className="w-full max-w-sm bg-white rounded-3xl shadow-2xl overflow-hidden border">
 
         {/* HEADER */}
-        <div className="flex justify-between items-center px-4 py-3 bg-slate-50 border-b">
+        <div className="flex justify-between items-center px-4 py-3 bg-slate-50 border-b z-20 relative">
           <div>
             <h3 className="font-bold">Barkod Tarayıcı</h3>
-            <p className="text-xs text-slate-500">Kamerayı barkoda yönelt</p>
+            <p className="text-xs text-slate-500">Kamerayı ortala</p>
           </div>
 
-          {onClose && (
-            <button onClick={onClose}>✕</button>
-          )}
+          {onClose && <button onClick={onClose}>✕</button>}
         </div>
 
         {/* CAMERA SELECT */}
-        <div className="p-3">
+        <div className="p-3 z-20 relative">
           <select
             className="w-full border rounded-xl p-2 text-sm"
-            value={selectedCamera}
-            onChange={(e) => setSelectedCamera(e.target.value)}
+            value={deviceId}
+            onChange={(e) => setDeviceId(e.target.value)}
           >
-            {cameras.map((c) => (
-              <option key={c.deviceId} value={c.deviceId}>
-                {c.label || 'Kamera'}
+            {devices.map((d) => (
+              <option key={d.deviceId} value={d.deviceId}>
+                {d.label || 'Kamera'}
               </option>
             ))}
           </select>
@@ -137,62 +132,63 @@ export default function BarkodScanner({
         <div className="px-4 pb-4">
           <div className="relative w-full h-[340px] rounded-2xl overflow-hidden bg-black">
 
-            {/* VIDEO (CRITICAL FIX) */}
+            {/* VIDEO (EN ALT KATMAN) */}
             <video
               ref={videoRef}
               autoPlay
               playsInline
               muted
-              className="absolute inset-0 w-full h-full object-cover"
+              className="absolute inset-0 w-full h-full object-cover z-0"
             />
 
             {/* DARK OVERLAY */}
-            <div className="absolute inset-0 bg-black/50 pointer-events-none" />
+            <div className="absolute inset-0 bg-black/60 z-10 pointer-events-none" />
 
-            {/* BLUR SCAN ZONE (iPhone style) */}
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+            {/* ===== FRAME LAYER (EN ÖNEMLİ KISIM) ===== */}
+            <div className="absolute inset-0 flex items-center justify-center z-30 pointer-events-none">
 
-              <div className="relative w-[260px] h-[140px] rounded-2xl overflow-hidden">
+              <div className="relative w-[260px] h-[140px]">
 
-                {/* clear center */}
-                <div className="absolute inset-0 border-4 border-cyan-400 rounded-2xl shadow-[0_0_30px_cyan]" />
+                {/* OUTLINE FRAME */}
+                <div className="absolute inset-0 border-4 border-cyan-400 rounded-2xl shadow-[0_0_35px_cyan]" />
 
-                {/* glow pulse */}
-                <div className="absolute inset-0 animate-pulse bg-cyan-400/10" />
+                {/* CORNERS (görsel güçlendirme) */}
+                <div className="absolute -top-2 -left-2 w-6 h-6 border-l-4 border-t-4 border-cyan-300" />
+                <div className="absolute -top-2 -right-2 w-6 h-6 border-r-4 border-t-4 border-cyan-300" />
+                <div className="absolute -bottom-2 -left-2 w-6 h-6 border-l-4 border-b-4 border-cyan-300" />
+                <div className="absolute -bottom-2 -right-2 w-6 h-6 border-r-4 border-b-4 border-cyan-300" />
 
-                {/* scan line */}
+                {/* SCAN LINE */}
                 <div className="absolute w-full h-[3px] bg-red-500 animate-[scan_2s_linear_infinite]" />
-
               </div>
 
             </div>
+
           </div>
         </div>
 
         {/* BUTTON */}
-        <div className="px-4 pb-4">
+        <div className="px-4 pb-4 z-20 relative">
           <button
-            onClick={isScanning ? stop : start}
-            className={`w-full py-3 rounded-xl font-bold text-white transition ${
-              isScanning ? 'bg-red-500' : 'bg-blue-600'
+            onClick={scanning ? stop : start}
+            className={`w-full py-3 rounded-xl font-bold text-white ${
+              scanning ? 'bg-red-500' : 'bg-blue-600'
             }`}
           >
-            {isScanning ? 'Durdur' : 'Kamerayı Aç'}
+            {scanning ? 'Durdur' : 'Kamerayı Aç'}
           </button>
 
           {error && (
-            <p className="text-red-500 text-xs mt-2 text-center">
-              {error}
-            </p>
+            <p className="text-red-500 text-xs mt-2 text-center">{error}</p>
           )}
         </div>
 
-        {/* ANIMATION FIX */}
+        {/* ANIMATION */}
         <style jsx>{`
           @keyframes scan {
-            0% { transform: translateY(0%); }
+            0% { transform: translateY(0px); }
             50% { transform: translateY(130px); }
-            100% { transform: translateY(0%); }
+            100% { transform: translateY(0px); }
           }
         `}</style>
 
