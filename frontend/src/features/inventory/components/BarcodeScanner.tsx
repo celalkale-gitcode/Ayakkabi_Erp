@@ -6,11 +6,10 @@ import { BrowserMultiFormatReader } from '@zxing/browser';
 export default function BarkodScanner({ onResult, onClose }: any) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const readerRef = useRef<BrowserMultiFormatReader | null>(null);
-  const controlsRef = useRef<any>(null);
+  const streamRef = useRef<MediaStream | null>(null);
 
-  const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
-  const [deviceId, setDeviceId] = useState('');
   const [scanning, setScanning] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const last = useRef<string | null>(null);
   const lock = useRef(false);
@@ -18,24 +17,34 @@ export default function BarkodScanner({ onResult, onClose }: any) {
   useEffect(() => {
     readerRef.current = new BrowserMultiFormatReader();
 
-    BrowserMultiFormatReader.listVideoInputDevices()
-      .then((d) => {
-        setDevices(d);
-        setDeviceId(d?.[0]?.deviceId || '');
-      });
-
     return () => stop();
   }, []);
 
+  // 🔥 ARKA KAMERA ZORLAMA (FIX)
   const start = async () => {
-    if (!readerRef.current || !videoRef.current) return;
+    try {
+      setError(null);
 
-    stop();
-    setScanning(true);
+      if (!readerRef.current || !videoRef.current) return;
 
-    controlsRef.current =
-      await readerRef.current.decodeFromVideoDevice(
-        deviceId,
+      stop();
+      setScanning(true);
+
+      // 👉 FORCE BACK CAMERA
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: { ideal: 'environment' }, // <-- CRITICAL FIX
+        },
+        audio: false,
+      });
+
+      streamRef.current = stream;
+
+      videoRef.current.srcObject = stream;
+      await videoRef.current.play();
+
+      readerRef.current.decodeFromStream(
+        stream,
         videoRef.current,
         (res) => {
           if (!res) return;
@@ -49,120 +58,112 @@ export default function BarkodScanner({ onResult, onClose }: any) {
           lock.current = true;
           last.current = code;
 
+          // 🔊 haptic + feedback
           navigator.vibrate?.(120);
+
+          // optional beep
+          try {
+            const ctx = new AudioContext();
+            const osc = ctx.createOscillator();
+            osc.frequency.value = 800;
+            osc.connect(ctx.destination);
+            osc.start();
+            osc.stop(ctx.currentTime + 0.1);
+          } catch {}
+
           onResult(code);
 
           setTimeout(() => {
             lock.current = false;
             last.current = null;
-          }, 1500);
+          }, 1200);
         }
       );
+    } catch (e: any) {
+      console.error(e);
+      setError('Kamera açılamadı (izin verildi mi?)');
+      setScanning(false);
+    }
   };
 
   const stop = () => {
-    controlsRef.current?.stop();
-    controlsRef.current = null;
+    try {
+      streamRef.current?.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
 
-    if (videoRef.current?.srcObject) {
-      (videoRef.current.srcObject as MediaStream)
-        .getTracks()
-        .forEach((t) => t.stop());
+      readerRef.current?.reset?.();
 
-      videoRef.current.srcObject = null;
-    }
+      if (videoRef.current) {
+        videoRef.current.srcObject = null;
+      }
+    } catch {}
 
     setScanning(false);
   };
 
   return (
     <div className="w-full flex justify-center">
-
       <div className="w-full max-w-sm bg-white rounded-3xl shadow-2xl border overflow-hidden">
 
         {/* HEADER */}
-        <div className="flex justify-between px-4 py-3 bg-slate-50 border-b z-20 relative">
+        <div className="flex justify-between px-4 py-3 bg-slate-50 border-b z-20">
           <div>
-            <h3 className="font-bold">Barkod Tarayıcı</h3>
-            <p className="text-xs text-slate-500">Frame artık kesin görünür</p>
+            <h3 className="font-bold">AI Barkod Scanner</h3>
+            <p className="text-xs text-slate-500">
+              Arka kamera + auto focus aktif
+            </p>
           </div>
-          {onClose && <button onClick={onClose}>✕</button>}
-        </div>
 
-        {/* SELECT */}
-        <div className="p-3">
-          <select
-            className="w-full border rounded-xl p-2 text-sm"
-            value={deviceId}
-            onChange={(e) => setDeviceId(e.target.value)}
-          >
-            {devices.map((d) => (
-              <option key={d.deviceId} value={d.deviceId}>
-                {d.label || 'Kamera'}
-              </option>
-            ))}
-          </select>
+          {onClose && <button onClick={onClose}>✕</button>}
         </div>
 
         {/* CAMERA AREA */}
         <div className="px-4 pb-4">
-
-          {/* CRITICAL WRAPPER */}
           <div className="relative w-full h-[340px] bg-black rounded-2xl overflow-hidden">
 
-            {/* VIDEO (FIXED SIZE GUARANTEE) */}
+            {/* VIDEO */}
             <video
               ref={videoRef}
               autoPlay
               playsInline
               muted
-              className="absolute inset-0 w-full h-full object-cover z-0"
+              className="absolute inset-0 w-full h-full object-cover"
             />
 
-            {/* DARK LAYER */}
-            <div className="absolute inset-0 bg-black/50 z-10 pointer-events-none" />
+            {/* DARK MASK */}
+            <div className="absolute inset-0 bg-black/50 pointer-events-none" />
 
-            {/* 🔥 FRAME LAYER (DEBUGGED + FORCED TOP) */}
-            <div className="absolute inset-0 z-50 flex items-center justify-center pointer-events-none">
+            {/* 🔥 AI STYLE SCAN FRAME (FIXED VISIBILITY) */}
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-50">
 
-              {/* FRAME BOX */}
-              <div
-                className="
-                  w-[260px]
-                  h-[140px]
-                  relative
-                "
-                style={{
-                  border: '4px solid #22d3ee',
-                  borderRadius: '18px',
-                  boxShadow: '0 0 35px rgba(34,211,238,0.9)',
-                }}
-              >
+              <div className="relative w-[260px] h-[140px]">
 
-                {/* CORNERS (EXTRA VISUAL FIX) */}
+                {/* glowing frame */}
+                <div className="absolute inset-0 rounded-2xl border-4 border-cyan-400 shadow-[0_0_35px_rgba(34,211,238,0.9)] animate-pulse" />
+
+                {/* scanning line */}
+                <div
+                  className="absolute left-0 w-full h-[3px] bg-red-500"
+                  style={{
+                    animation: 'scan 1.8s linear infinite',
+                    boxShadow: '0 0 12px red',
+                  }}
+                />
+
+                {/* corner glow */}
                 <div className="absolute -top-2 -left-2 w-6 h-6 border-l-4 border-t-4 border-cyan-300" />
                 <div className="absolute -top-2 -right-2 w-6 h-6 border-r-4 border-t-4 border-cyan-300" />
                 <div className="absolute -bottom-2 -left-2 w-6 h-6 border-l-4 border-b-4 border-cyan-300" />
                 <div className="absolute -bottom-2 -right-2 w-6 h-6 border-r-4 border-b-4 border-cyan-300" />
 
-                {/* SCAN LINE */}
-                <div
-                  className="absolute w-full h-[3px] bg-red-500"
-                  style={{
-                    animation: 'scan 2s linear infinite',
-                    boxShadow: '0 0 15px red',
-                  }}
-                />
-
               </div>
-
             </div>
 
           </div>
         </div>
 
         {/* BUTTON */}
-        <div className="px-4 pb-4 z-20 relative">
+        <div className="px-4 pb-4">
           <button
             onClick={scanning ? stop : start}
             className={`w-full py-3 rounded-xl font-bold text-white ${
@@ -171,6 +172,12 @@ export default function BarkodScanner({ onResult, onClose }: any) {
           >
             {scanning ? 'Durdur' : 'Kamerayı Aç'}
           </button>
+
+          {error && (
+            <p className="text-red-500 text-xs mt-2 text-center">
+              {error}
+            </p>
+          )}
         </div>
 
         {/* ANIMATION */}
