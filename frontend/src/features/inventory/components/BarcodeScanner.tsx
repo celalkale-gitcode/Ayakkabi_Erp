@@ -29,7 +29,7 @@ export default function BarkodScanner({ onResult, onClose }: any) {
     return () => stop();
   }, []);
 
-  // 🔥 START (BACK CAMERA FIXED)
+  // START (BACK CAMERA FIXED)
   const start = async () => {
     try {
       setError(null);
@@ -85,14 +85,25 @@ export default function BarkodScanner({ onResult, onClose }: any) {
 
   const stop = () => {
     try {
-      streamRef.current?.getTracks().forEach((t) => t.stop());
-      streamRef.current = null;
-      readerRef.current?.reset?.();
+      // Stream durdurma
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((t) => t.stop());
+        streamRef.current = null;
+      }
+
+      // HATA VEREN KISIM DÜZELTİLDİ:
+      // @ts-ignore - TypeScript'in BrowserMultiFormatReader üzerinde reset metodunu görmesini zorluyoruz
+      if (readerRef.current && typeof (readerRef.current as any).reset === 'function') {
+        // @ts-ignore
+        (readerRef.current as any).reset();
+      }
 
       if (videoRef.current) {
         videoRef.current.srcObject = null;
       }
-    } catch {}
+    } catch (err) {
+      console.warn("Durdurma sırasında hata oluştu (kritik değil):", err);
+    }
 
     setScanning(false);
   };
@@ -108,19 +119,23 @@ export default function BarkodScanner({ onResult, onClose }: any) {
             <p className="text-xs text-slate-500">Pro mod + stabil kamera</p>
           </div>
 
-          {onClose && <button onClick={onClose}>✕</button>}
+          {onClose && (
+            <button onClick={onClose} className="p-2 hover:bg-slate-200 rounded-full transition">
+              ✕
+            </button>
+          )}
         </div>
 
         {/* CAMERA SELECT */}
         <div className="p-3">
           <select
-            className="w-full border rounded-xl p-2 text-sm"
+            className="w-full border rounded-xl p-2 text-sm bg-white outline-none focus:ring-2 focus:ring-blue-500"
             value={deviceId}
             onChange={(e) => setDeviceId(e.target.value)}
           >
             {devices.map((d) => (
               <option key={d.deviceId} value={d.deviceId}>
-                {d.label || 'Kamera'}
+                {d.label || `Kamera ${devices.indexOf(d) + 1}`}
               </option>
             ))}
           </select>
@@ -142,7 +157,7 @@ export default function BarkodScanner({ onResult, onClose }: any) {
             {/* DARK MASK */}
             <div className="absolute inset-0 bg-black/55 z-10 pointer-events-none" />
 
-            {/* 🔥 FIXED FRAME LAYER (EN KRİTİK KISIM) */}
+            {/* FIXED FRAME LAYER */}
             <div className="absolute inset-0 z-50 flex items-center justify-center pointer-events-none">
 
               <div className="relative w-[260px] h-[140px]">
@@ -176,21 +191,20 @@ export default function BarkodScanner({ onResult, onClose }: any) {
         <div className="px-4 pb-4">
           <button
             onClick={scanning ? stop : start}
-            className={`w-full py-3 rounded-xl font-bold text-white transition ${
-              scanning ? 'bg-red-500' : 'bg-blue-600'
+            className={`w-full py-3 rounded-xl font-bold text-white transition active:scale-95 ${
+              scanning ? 'bg-red-500 hover:bg-red-600' : 'bg-blue-600 hover:bg-blue-700'
             }`}
           >
             {scanning ? 'Durdur' : 'Kamerayı Aç'}
           </button>
 
           {error && (
-            <p className="text-red-500 text-xs mt-2 text-center">
+            <p className="text-red-500 text-xs mt-2 text-center font-medium">
               {error}
             </p>
           )}
         </div>
 
-        {/* ANIMATION */}
         <style jsx>{`
           @keyframes scan {
             0% { transform: translateY(0); }
