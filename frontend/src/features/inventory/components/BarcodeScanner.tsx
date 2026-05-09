@@ -78,57 +78,65 @@ export default function BarkodScanner({ onResult, onClose }: any) {
   };
 
   return (
-    <div style={{ position: 'relative', width: '100%', maxWidth: '400px', margin: '0 auto', background: '#fff', borderRadius: '24px', overflow: 'hidden', border: '1px solid #eee' }}>
+    <div className="flex flex-col w-full max-w-sm mx-auto bg-white rounded-[2rem] shadow-2xl overflow-hidden border border-slate-100">
       
       {/* HEADER */}
-      <div style={{ padding: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #eee' }}>
-        <span style={{ fontWeight: 'bold' }}>Barkod Tarayıcı</span>
-        {onClose && <button onClick={onClose} style={{ color: '#999', fontSize: '20px' }}>✕</button>}
+      <div className="flex justify-between items-center px-6 py-4 border-b bg-white relative z-50">
+        <span className="font-bold text-slate-800">Barkod Tarayıcı</span>
+        {onClose && <button onClick={onClose} className="p-1 text-slate-400 text-xl">✕</button>}
       </div>
 
-      {/* TARAMA ALANI KAPSAYICISI */}
-      <div style={{ position: 'relative', width: '100%', height: '350px', background: '#000', overflow: 'hidden' }}>
+      {/* TARAMA ALANI (GRID STACK) */}
+      <div className="grid grid-cols-1 grid-rows-1 w-full h-[360px] bg-black relative overflow-hidden">
         
-        {/* 1. KATMAN: VİDEO */}
+        {/* 1. KATMAN: VİDEO (Grid hücresine yayılır) */}
         <video
           ref={videoRef}
           autoPlay
           playsInline
           muted
-          style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover', zIndex: 1 }}
+          className="col-start-1 row-start-1 w-full h-full object-cover"
+          style={{ gridArea: '1 / 1 / 2 / 2' }}
         />
 
-        {/* 2. KATMAN: MASKE VE ÇERÇEVE */}
-        <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', zIndex: 10, pointerEvents: 'none', display: 'flex', alignItems: 'center', justifyCenter: 'center' }}>
-          
-          {/* SVG Maske */}
-          <svg style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}>
+        {/* 2. KATMAN: MASKE (Videonun üstüne biner) */}
+        <div 
+          className="col-start-1 row-start-1 w-full h-full z-10 pointer-events-none"
+          style={{ gridArea: '1 / 1 / 2 / 2' }}
+        >
+          <svg className="w-full h-full">
             <defs>
-              <mask id="hole">
+              <mask id="overlay-mask">
                 <rect width="100%" height="100%" fill="white" />
-                <rect x="50%" y="50%" width="260" height="160" rx="20" fill="black" transform="translate(-130, -80)" />
+                <rect x="50%" y="50%" width="260" height="160" rx="24" fill="black" transform="translate(-130, -80)" />
               </mask>
             </defs>
-            <rect width="100%" height="100%" fill="rgba(0,0,0,0.6)" mask="url(#hole)" />
+            <rect width="100%" height="100%" fill="rgba(0,0,0,0.65)" mask="url(#overlay-mask)" />
           </svg>
+        </div>
 
-          {/* Köşe Çizgileri */}
-          <div style={{ position: 'absolute', top: '50%', left: '50%', width: '260px', height: '160px', transform: 'translate(-130px, -80px)' }}>
-            <div style={{ position: 'absolute', top: 0, left: 0, width: '32px', height: '32px', borderTop: '4px solid #fff', borderLeft: '4px solid #fff', borderTopLeftRadius: '16px' }} />
-            <div style={{ position: 'absolute', top: 0, right: 0, width: '32px', height: '32px', borderTop: '4px solid #fff', borderRight: '4px solid #fff', borderTopRightRadius: '16px' }} />
-            <div style={{ position: 'absolute', bottom: 0, left: 0, width: '32px', height: '32px', borderBottom: '4px solid #fff', borderLeft: '4px solid #fff', borderBottomLeftRadius: '16px' }} />
-            <div style={{ position: 'absolute', bottom: 0, right: 0, width: '32px', height: '32px', borderBottom: '4px solid #fff', borderRight: '4px solid #fff', borderBottomRightRadius: '16px' }} />
+        {/* 3. KATMAN: ÇERÇEVE VE ÇİZGİ (En üstte merkezlenir) */}
+        <div 
+          className="col-start-1 row-start-1 w-full h-full z-20 pointer-events-none flex items-center justify-center"
+          style={{ gridArea: '1 / 1 / 2 / 2' }}
+        >
+          <div className="relative w-[260px] h-[160px]">
+            {/* Beyaz Köşe Çizgileri */}
+            <div className="absolute top-0 left-0 w-10 h-10 border-t-[5px] border-l-[5px] border-white rounded-tl-2xl" />
+            <div className="absolute top-0 right-0 w-10 h-10 border-t-[5px] border-r-[5px] border-white rounded-tr-2xl" />
+            <div className="absolute bottom-0 left-0 w-10 h-10 border-b-[5px] border-l-[5px] border-white rounded-bl-2xl" />
+            <div className="absolute bottom-0 right-0 w-10 h-10 border-b-[5px] border-r-[5px] border-white rounded-br-2xl" />
             
-            {/* Tarama Çizgisi */}
-            <div className="scan-line-animation" style={{ position: 'absolute', left: '8px', right: '8px', height: '2px', background: 'red', boxShadow: '0 0 15px red' }} />
+            {/* Animasyonlu Çizgi */}
+            <div className="absolute left-4 right-4 h-[3px] bg-red-500 shadow-[0_0_20px_red] animate-scan-fast" />
           </div>
         </div>
       </div>
 
       {/* KONTROLLER */}
-      <div style={{ padding: '20px', background: '#fff' }}>
+      <div className="p-6 bg-white space-y-4">
         <select
-          style={{ width: '100%', padding: '12px', borderRadius: '12px', border: '2px solid #f0f0f0', marginBottom: '16px', outline: 'none' }}
+          className="w-full border-2 border-slate-100 rounded-xl p-3 text-sm focus:border-blue-600 outline-none transition-colors"
           value={deviceId}
           onChange={(e) => setDeviceId(e.target.value)}
         >
@@ -139,21 +147,23 @@ export default function BarkodScanner({ onResult, onClose }: any) {
 
         <button
           onClick={scanning ? stop : start}
-          style={{ width: '100%', padding: '16px', borderRadius: '16px', fontWeight: 'bold', color: '#fff', border: 'none', cursor: 'pointer', transition: '0.2s', background: scanning ? '#ef4444' : '#2563eb' }}
+          className={`w-full py-4 rounded-2xl font-black text-white tracking-widest transition-all active:scale-95 ${
+            scanning ? 'bg-red-500 shadow-lg shadow-red-100' : 'bg-blue-600 shadow-lg shadow-blue-100'
+          }`}
         >
-          {scanning ? 'DURDUR' : 'TARAMAYI BAŞLAT'}
+          {scanning ? 'DURDUR' : 'KAMERAYI BAŞLAT'}
         </button>
-        {error && <p style={{ color: 'red', textAlign: 'center', fontSize: '12px', marginTop: '10px' }}>{error}</p>}
       </div>
 
       <style jsx global>{`
         @keyframes scanMove {
-          0% { top: 10%; }
-          50% { top: 90%; }
-          100% { top: 10%; }
+          0% { top: 15%; opacity: 0.3; }
+          50% { top: 85%; opacity: 1; }
+          100% { top: 15%; opacity: 0.3; }
         }
-        .scan-line-animation {
-          animation: scanMove 2s linear infinite;
+        .animate-scan-fast {
+          position: absolute;
+          animation: scanMove 2s ease-in-out infinite;
         }
       `}</style>
     </div>
