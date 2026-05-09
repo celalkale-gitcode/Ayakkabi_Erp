@@ -9,7 +9,7 @@ export default function BarkodScanner({ onResult, onClose }: any) {
   const streamRef = useRef<MediaStream | null>(null);
 
   const [scanning, setScanning] = useState(false);
-  const [processing, setProcessing] = useState(false);
+  const [processing, setProcessing] = useState(false); 
   const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
   const [deviceId, setDeviceId] = useState('');
   const [lastCode, setLastCode] = useState<string | null>(null);
@@ -22,8 +22,11 @@ export default function BarkodScanner({ onResult, onClose }: any) {
     BrowserMultiFormatReader.listVideoInputDevices()
       .then((d) => {
         setDevices(d);
-        const backCam = d.find(device => device.label.toLowerCase().includes('back') || device.label.toLowerCase().includes('arka'));
-        setDeviceId(backCam ? backCam.deviceId : (d?.[0]?.deviceId || ''));
+        const backCam = d.find(device => 
+          device.label.toLowerCase().includes('back') || 
+          device.label.toLowerCase().includes('arka')
+        );
+        setDeviceId(backCam ? backCam.deviceId : (d[0]?.deviceId || ''));
       })
       .catch(() => setError('Kamera listesi alınamadı'));
     return () => stop();
@@ -37,11 +40,18 @@ export default function BarkodScanner({ onResult, onClose }: any) {
     try {
       setError(null);
       if (!videoRef.current || !readerRef.current) return;
-      if (streamRef.current) streamRef.current.getTracks().forEach((t) => t.stop());
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((t) => t.stop());
+      }
 
       setScanning(true);
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { deviceId: { exact: deviceId }, width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: 'environment' }
+        video: { 
+          deviceId: deviceId ? { exact: deviceId } : undefined, 
+          width: { ideal: 1280 }, 
+          height: { ideal: 720 }, 
+          facingMode: 'environment' 
+        }
       });
 
       streamRef.current = stream;
@@ -53,17 +63,16 @@ export default function BarkodScanner({ onResult, onClose }: any) {
         const code = res.getText().trim();
         
         lock.current = true;
-        setLastCode(code); // 🔥 Okunan kodu hemen ekrana yaz
-        setProcessing(true); // 🔥 "İşleniyor" ekranını aç
+        setLastCode(code); 
+        setProcessing(true); 
         
         if (navigator.vibrate) navigator.vibrate(100);
         onResult(code);
 
-        // İşlemin tamamlandığını ve yeni okuma için beklendiğini simüle et
         setTimeout(() => {
           setProcessing(false);
           lock.current = false;
-        }, 2500); 
+        }, 2000); 
       });
     } catch (e) {
       setError('Kamera başlatılamadı');
@@ -76,26 +85,25 @@ export default function BarkodScanner({ onResult, onClose }: any) {
       streamRef.current?.getTracks().forEach((t) => t.stop());
       streamRef.current = null;
       // @ts-ignore
-      readerRef.current?.reset?.();
+      if (readerRef.current) (readerRef.current as any).reset?.();
       if (videoRef.current) videoRef.current.srcObject = null;
     } catch {}
     setScanning(false);
     setProcessing(false);
+    setLastCode(null); // Durdurunca son kodu temizle
   };
 
   return (
-    <div style={{ width: '100%', maxWidth: '380px', margin: '0 auto', background: '#fff', borderRadius: '32px', overflow: 'hidden', border: '2px solid #f1f5f9', display: 'block' }}>
+    <div style={{ width: '100%', maxWidth: '380px', margin: '0 auto', background: '#fff', borderRadius: '32px', overflow: 'hidden', border: '2px solid #f1f5f9' }}>
       
-      {/* 1. ÜST BAŞLIK */}
+      {/* BAŞLIK */}
       <div style={{ height: '60px', padding: '0 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #f1f5f9' }}>
-        <span style={{ fontWeight: 800, color: '#0f172a' }}>Ürün Tarayıcı</span>
+        <span style={{ fontWeight: 800, color: '#0f172a' }}>Barkod Tarayıcı</span>
         {onClose && <button onClick={onClose} style={{ border: 'none', background: '#f1f5f9', color: '#64748b', width: '32px', height: '32px', borderRadius: '50%', cursor: 'pointer' }}>✕</button>}
       </div>
 
-      {/* 2. KAMERA VE OVERLAY ALANI (BURASI KRİTİK) */}
+      {/* KAMERA ALANI */}
       <div style={{ position: 'relative', width: '100%', height: '340px', backgroundColor: '#000', overflow: 'hidden' }}>
-        
-        {/* VİDEO */}
         <video ref={videoRef} autoPlay playsInline muted style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover', zIndex: 1 }} />
         
         {/* MASKE */}
@@ -111,16 +119,16 @@ export default function BarkodScanner({ onResult, onClose }: any) {
             </svg>
         </div>
 
-        {/* 4 KÖŞE ÇERÇEVE */}
-        <div style={{ position: 'absolute', top: '50%', left: '50%', width: '260px', height: '150px', zIndex: 10, pointerEvents: 'none', transform: 'translate(-130px, -75px)', display: 'block' }}>
+        {/* ÇERÇEVE */}
+        <div style={{ position: 'absolute', top: '50%', left: '50%', width: '260px', height: '150px', zIndex: 10, pointerEvents: 'none', transform: 'translate(-130px, -75px)' }}>
             <div style={{ position: 'absolute', top: 0, left: 0, width: '32px', height: '32px', borderTop: '6px solid white', borderLeft: '6px solid white', borderTopLeftRadius: '16px' }} />
             <div style={{ position: 'absolute', top: 0, right: 0, width: '32px', height: '32px', borderTop: '6px solid white', borderRight: '6px solid white', borderTopRightRadius: '16px' }} />
             <div style={{ position: 'absolute', bottom: 0, left: 0, width: '32px', height: '32px', borderBottom: '6px solid white', borderLeft: '6px solid white', borderBottomLeftRadius: '16px' }} />
             <div style={{ position: 'absolute', bottom: 0, right: 0, width: '32px', height: '32px', borderBottom: '6px solid white', borderRight: '6px solid white', borderBottomRightRadius: '16px' }} />
-            <div className="scanner-line" style={{ position: 'absolute', left: '10px', right: '10px', height: '3px', background: 'red', boxShadow: '0 0 15px red' }} />
+            {!processing && <div className="scanner-line" style={{ position: 'absolute', left: '10px', right: '10px', height: '3px', background: 'red', boxShadow: '0 0 15px red' }} />}
         </div>
 
-        {/* 🔥 İŞLENİYOR OVERLAY (TAM ORTADA VE EN ÜSTTE) */}
+        {/* İŞLENİYOR EKRANI */}
         {processing && (
           <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', zIndex: 100, backgroundColor: 'rgba(15, 23, 42, 0.9)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: '#fff' }}>
               <div className="spinner"></div>
@@ -129,17 +137,15 @@ export default function BarkodScanner({ onResult, onClose }: any) {
         )}
       </div>
 
-      {/* 3. SONUÇ VE KONTROLLER (BİRBİRİNİ İTMEYEN SABİT ALAN) */}
-      <div style={{ padding: '20px', background: '#fff', display: 'block' }}>
+      {/* ALT PANEL */}
+      <div style={{ padding: '20px', background: '#fff' }}>
         
-        {/* 🔥 OKUNAN BARKOD ALANI (BELİRGİN VE SABİT) */}
+        {/* TEK BARKOD GÖSTERGESİ */}
         <div style={{ height: '44px', marginBottom: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: lastCode ? '#f8fafc' : 'transparent', borderRadius: '12px', border: lastCode ? '1px solid #e2e8f0' : 'none' }}>
-          {lastCode ? (
+          {lastCode && (
             <span style={{ color: '#0f172a', fontWeight: 800, fontSize: '16px' }}>
               Barkod: <span style={{ color: '#2563eb' }}>{lastCode}</span>
             </span>
-          ) : (
-            <span style={{ color: '#94a3b8', fontSize: '13px' }}>Kamerayı barkoda yaklaştırın</span>
           )}
         </div>
 
@@ -155,26 +161,16 @@ export default function BarkodScanner({ onResult, onClose }: any) {
 
         <button
           onClick={scanning ? stop : start}
-          style={{ width: '100%', height: '56px', borderRadius: '16px', fontWeight: 800, color: '#fff', border: 'none', background: scanning ? '#ef4444' : '#2563eb', cursor: 'pointer', fontSize: '15px' }}
+          style={{ width: '100%', height: '56px', borderRadius: '16px', fontWeight: 800, color: '#fff', border: 'none', background: scanning ? '#ef4444' : '#2563eb', cursor: 'pointer' }}
         >
           {scanning ? 'DURDUR' : 'KAMERAYI BAŞLAT'}
         </button>
-
-        {error && <p style={{ color: '#ef4444', textAlign: 'center', marginTop: '10px', fontSize: '12px' }}>{error}</p>}
       </div>
 
       <style jsx global>{`
         @keyframes scanMove { 0% { top: 15%; } 50% { top: 85%; } 100% { top: 15%; } }
-        .scanner-line { animation: scanMove 2.5s linear infinite; }
-        
-        .spinner {
-          width: 48px;
-          height: 48px;
-          border: 5px solid rgba(255, 255, 255, 0.2);
-          border-top: 5px solid #fff;
-          border-radius: 50%;
-          animation: spin 1s linear infinite;
-        }
+        .scanner-line { animation: scanMove 2s linear infinite; }
+        .spinner { width: 48px; height: 48px; border: 5px solid rgba(255,255,255,0.2); border-top: 5px solid #fff; border-radius: 50%; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
       `}</style>
     </div>
