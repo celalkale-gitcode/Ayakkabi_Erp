@@ -9,6 +9,8 @@ export default function BarkodScanner({ onResult, onClose }: any) {
   const streamRef = useRef<MediaStream | null>(null);
 
   const [scanning, setScanning] = useState(false);
+  const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
+  const [deviceId, setDeviceId] = useState('');
   const [error, setError] = useState<string | null>(null);
 
   const last = useRef<string | null>(null);
@@ -16,22 +18,31 @@ export default function BarkodScanner({ onResult, onClose }: any) {
 
   useEffect(() => {
     readerRef.current = new BrowserMultiFormatReader();
+
+    BrowserMultiFormatReader.listVideoInputDevices()
+      .then((d) => {
+        setDevices(d);
+        setDeviceId(d?.[0]?.deviceId || '');
+      })
+      .catch(() => setError('Kamera listesi alınamadı'));
+
     return () => stop();
   }, []);
 
+  // 🔥 START (BACK CAMERA FIXED)
   const start = async () => {
     try {
       setError(null);
 
-      if (!readerRef.current || !videoRef.current) return;
+      if (!videoRef.current || !readerRef.current) return;
 
       stop();
       setScanning(true);
 
-      // 🔥 FORCE BACK CAMERA (fix Android issue)
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
-          facingMode: { ideal: 'environment' },
+          deviceId: deviceId ? { exact: deviceId } : undefined,
+          facingMode: deviceId ? undefined : { ideal: 'environment' },
         },
         audio: false,
       });
@@ -57,16 +68,6 @@ export default function BarkodScanner({ onResult, onClose }: any) {
           last.current = code;
 
           navigator.vibrate?.(120);
-
-          try {
-            const ctx = new AudioContext();
-            const osc = ctx.createOscillator();
-            osc.frequency.value = 850;
-            osc.connect(ctx.destination);
-            osc.start();
-            osc.stop(ctx.currentTime + 0.08);
-          } catch {}
-
           onResult(code);
 
           setTimeout(() => {
@@ -77,7 +78,7 @@ export default function BarkodScanner({ onResult, onClose }: any) {
       );
     } catch (e) {
       console.error(e);
-      setError('Kamera açılamadı');
+      setError('Kamera açılamadı (izin kontrol et)');
       setScanning(false);
     }
   };
@@ -86,6 +87,7 @@ export default function BarkodScanner({ onResult, onClose }: any) {
     try {
       streamRef.current?.getTracks().forEach((t) => t.stop());
       streamRef.current = null;
+      readerRef.current?.reset?.();
 
       if (videoRef.current) {
         videoRef.current.srcObject = null;
@@ -100,22 +102,35 @@ export default function BarkodScanner({ onResult, onClose }: any) {
       <div className="w-full max-w-sm bg-white rounded-3xl shadow-2xl border overflow-hidden">
 
         {/* HEADER */}
-        <div className="flex justify-between px-4 py-3 bg-slate-50 border-b z-20 relative">
+        <div className="flex justify-between px-4 py-3 bg-slate-50 border-b relative z-50">
           <div>
             <h3 className="font-bold">AI Barkod Scanner</h3>
-            <p className="text-xs text-slate-500">
-              Arka kamera + real-time scan
-            </p>
+            <p className="text-xs text-slate-500">Pro mod + stabil kamera</p>
           </div>
 
           {onClose && <button onClick={onClose}>✕</button>}
         </div>
 
-        {/* CAMERA */}
+        {/* CAMERA SELECT */}
+        <div className="p-3">
+          <select
+            className="w-full border rounded-xl p-2 text-sm"
+            value={deviceId}
+            onChange={(e) => setDeviceId(e.target.value)}
+          >
+            {devices.map((d) => (
+              <option key={d.deviceId} value={d.deviceId}>
+                {d.label || 'Kamera'}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* CAMERA AREA */}
         <div className="px-4 pb-4">
           <div className="relative w-full h-[340px] bg-black rounded-2xl overflow-hidden">
 
-            {/* VIDEO (FIXED LAYER) */}
+            {/* VIDEO */}
             <video
               ref={videoRef}
               autoPlay
@@ -124,23 +139,23 @@ export default function BarkodScanner({ onResult, onClose }: any) {
               className="absolute inset-0 w-full h-full object-cover z-0"
             />
 
-            {/* DARK OVERLAY */}
+            {/* DARK MASK */}
             <div className="absolute inset-0 bg-black/55 z-10 pointer-events-none" />
 
-            {/* 🔥 FRAME (FORCED VISIBILITY FIX) */}
-            <div className="absolute inset-0 flex items-center justify-center z-50 pointer-events-none">
+            {/* 🔥 FIXED FRAME LAYER (EN KRİTİK KISIM) */}
+            <div className="absolute inset-0 z-50 flex items-center justify-center pointer-events-none">
 
               <div className="relative w-[260px] h-[140px]">
 
-                {/* FRAME BORDER */}
-                <div className="absolute inset-0 rounded-2xl border-4 border-cyan-400 shadow-[0_0_40px_rgba(34,211,238,0.95)] animate-pulse" />
+                {/* MAIN FRAME */}
+                <div className="absolute inset-0 rounded-2xl border-4 border-cyan-400 shadow-[0_0_30px_rgba(34,211,238,0.95)]" />
 
                 {/* SCAN LINE */}
                 <div
                   className="absolute left-0 w-full h-[3px] bg-red-500"
                   style={{
                     animation: 'scan 1.8s linear infinite',
-                    boxShadow: '0 0 14px red',
+                    boxShadow: '0 0 15px red',
                   }}
                 />
 
@@ -151,6 +166,7 @@ export default function BarkodScanner({ onResult, onClose }: any) {
                 <div className="absolute -bottom-2 -right-2 w-6 h-6 border-r-4 border-b-4 border-cyan-300" />
 
               </div>
+
             </div>
 
           </div>
@@ -160,7 +176,7 @@ export default function BarkodScanner({ onResult, onClose }: any) {
         <div className="px-4 pb-4">
           <button
             onClick={scanning ? stop : start}
-            className={`w-full py-3 rounded-xl font-bold text-white ${
+            className={`w-full py-3 rounded-xl font-bold text-white transition ${
               scanning ? 'bg-red-500' : 'bg-blue-600'
             }`}
           >
