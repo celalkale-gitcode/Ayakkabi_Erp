@@ -22,18 +22,16 @@ export default function BarkodScanner({ onResult, onClose }: any) {
     BrowserMultiFormatReader.listVideoInputDevices()
       .then((d) => {
         setDevices(d);
-        setDeviceId(d?.[0]?.deviceId || '');
+        if (d.length > 0) setDeviceId(d[0].deviceId);
       })
       .catch(() => setError('Kamera listesi alınamadı'));
 
     return () => stop();
   }, []);
 
-  // START (BACK CAMERA FIXED)
   const start = async () => {
     try {
       setError(null);
-
       if (!videoRef.current || !readerRef.current) return;
 
       stop();
@@ -48,7 +46,6 @@ export default function BarkodScanner({ onResult, onClose }: any) {
       });
 
       streamRef.current = stream;
-
       videoRef.current.srcObject = stream;
       await videoRef.current.play();
 
@@ -56,163 +53,113 @@ export default function BarkodScanner({ onResult, onClose }: any) {
         stream,
         videoRef.current,
         (res) => {
-          if (!res) return;
-
+          if (!res || lock.current) return;
           const code = res.getText();
-
-          if (lock.current) return;
-          if (last.current === code) return;
-          if (!/^\d{13}$/.test(code)) return;
+          if (last.current === code || !/^\d{13}$/.test(code)) return;
 
           lock.current = true;
           last.current = code;
-
           navigator.vibrate?.(120);
           onResult(code);
 
           setTimeout(() => {
             lock.current = false;
             last.current = null;
-          }, 1200);
+          }, 1500);
         }
       );
     } catch (e) {
-      console.error(e);
-      setError('Kamera açılamadı (izin kontrol et)');
+      setError('Kamera açılamadı');
       setScanning(false);
     }
   };
 
   const stop = () => {
     try {
-      // Stream durdurma
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach((t) => t.stop());
-        streamRef.current = null;
-      }
-
-      // HATA VEREN KISIM DÜZELTİLDİ:
-      // @ts-ignore - TypeScript'in BrowserMultiFormatReader üzerinde reset metodunu görmesini zorluyoruz
+      streamRef.current?.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
+      // @ts-ignore
       if (readerRef.current && typeof (readerRef.current as any).reset === 'function') {
         // @ts-ignore
         (readerRef.current as any).reset();
       }
-
-      if (videoRef.current) {
-        videoRef.current.srcObject = null;
-      }
-    } catch (err) {
-      console.warn("Durdurma sırasında hata oluştu (kritik değil):", err);
-    }
-
+      if (videoRef.current) videoRef.current.srcObject = null;
+    } catch {}
     setScanning(false);
   };
 
   return (
-    <div className="w-full flex justify-center">
-      <div className="w-full max-w-sm bg-white rounded-3xl shadow-2xl border overflow-hidden">
-
+    <div className="w-full flex justify-center p-2">
+      <div className="w-full max-w-sm bg-white rounded-3xl shadow-2xl border overflow-hidden flex flex-col">
+        
         {/* HEADER */}
-        <div className="flex justify-between px-4 py-3 bg-slate-50 border-b relative z-50">
+        <div className="flex justify-between items-center px-4 py-3 bg-slate-50 border-b">
           <div>
-            <h3 className="font-bold">AI Barkod Scanner</h3>
-            <p className="text-xs text-slate-500">Pro mod + stabil kamera</p>
+            <h3 className="font-bold text-slate-800 text-sm">Barkod Okuyucu</h3>
           </div>
-
-          {onClose && (
-            <button onClick={onClose} className="p-2 hover:bg-slate-200 rounded-full transition">
-              ✕
-            </button>
-          )}
+          {onClose && <button onClick={onClose} className="text-slate-400 p-1">✕</button>}
         </div>
 
-        {/* CAMERA SELECT */}
-        <div className="p-3">
+        {/* CAMERA AREA */}
+        <div className="relative w-full h-[360px] bg-black">
+          {/* 1. VIDEO LAYER */}
+          <video
+            ref={videoRef}
+            autoPlay
+            playsInline
+            muted
+            className="absolute inset-0 w-full h-full object-cover"
+          />
+
+          {/* 2. OVERLAY LAYER (Karanlık Maske) */}
+          <div className="absolute inset-0 bg-black/40 z-10 pointer-events-none" />
+
+          {/* 3. FRAME LAYER (EN ÜSTTE) */}
+          <div className="absolute inset-0 z-20 flex items-center justify-center pointer-events-none">
+            <div className="relative w-[280px] h-[160px]">
+              {/* Köşe Çizgileri */}
+              <div className="absolute inset-0 border-2 border-white/30 rounded-2xl" />
+              <div className="absolute inset-0 border-4 border-cyan-400 rounded-2xl shadow-[0_0_15px_rgba(34,211,238,0.5)]" />
+              
+              {/* Hareketli Tarama Çizgisi */}
+              <div className="absolute left-2 right-2 h-[2px] bg-red-500 shadow-[0_0_10px_red] animate-scan" />
+            </div>
+          </div>
+        </div>
+
+        {/* CONTROLS */}
+        <div className="p-4 space-y-3 bg-white">
           <select
-            className="w-full border rounded-xl p-2 text-sm bg-white outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full border rounded-xl p-2 text-xs bg-slate-50 outline-none"
             value={deviceId}
             onChange={(e) => setDeviceId(e.target.value)}
           >
             {devices.map((d) => (
-              <option key={d.deviceId} value={d.deviceId}>
-                {d.label || `Kamera ${devices.indexOf(d) + 1}`}
-              </option>
+              <option key={d.deviceId} value={d.deviceId}>{d.label || 'Kamera'}</option>
             ))}
           </select>
-        </div>
 
-        {/* CAMERA AREA */}
-        <div className="px-4 pb-4">
-          <div className="relative w-full h-[340px] bg-black rounded-2xl overflow-hidden">
-
-            {/* VIDEO */}
-            <video
-              ref={videoRef}
-              autoPlay
-              playsInline
-              muted
-              className="absolute inset-0 w-full h-full object-cover z-0"
-            />
-
-            {/* DARK MASK */}
-            <div className="absolute inset-0 bg-black/55 z-10 pointer-events-none" />
-
-            {/* FIXED FRAME LAYER */}
-            <div className="absolute inset-0 z-50 flex items-center justify-center pointer-events-none">
-
-              <div className="relative w-[260px] h-[140px]">
-
-                {/* MAIN FRAME */}
-                <div className="absolute inset-0 rounded-2xl border-4 border-cyan-400 shadow-[0_0_30px_rgba(34,211,238,0.95)]" />
-
-                {/* SCAN LINE */}
-                <div
-                  className="absolute left-0 w-full h-[3px] bg-red-500"
-                  style={{
-                    animation: 'scan 1.8s linear infinite',
-                    boxShadow: '0 0 15px red',
-                  }}
-                />
-
-                {/* CORNERS */}
-                <div className="absolute -top-2 -left-2 w-6 h-6 border-l-4 border-t-4 border-cyan-300" />
-                <div className="absolute -top-2 -right-2 w-6 h-6 border-r-4 border-t-4 border-cyan-300" />
-                <div className="absolute -bottom-2 -left-2 w-6 h-6 border-l-4 border-b-4 border-cyan-300" />
-                <div className="absolute -bottom-2 -right-2 w-6 h-6 border-r-4 border-b-4 border-cyan-300" />
-
-              </div>
-
-            </div>
-
-          </div>
-        </div>
-
-        {/* BUTTON */}
-        <div className="px-4 pb-4">
           <button
             onClick={scanning ? stop : start}
-            className={`w-full py-3 rounded-xl font-bold text-white transition active:scale-95 ${
-              scanning ? 'bg-red-500 hover:bg-red-600' : 'bg-blue-600 hover:bg-blue-700'
+            className={`w-full py-3 rounded-xl font-bold text-white transition-all ${
+              scanning ? 'bg-red-500' : 'bg-blue-600 shadow-lg shadow-blue-200'
             }`}
           >
-            {scanning ? 'Durdur' : 'Kamerayı Aç'}
+            {scanning ? 'Durdur' : 'Kamerayı Başlat'}
           </button>
-
-          {error && (
-            <p className="text-red-500 text-xs mt-2 text-center font-medium">
-              {error}
-            </p>
-          )}
         </div>
 
-        <style jsx>{`
+        <style jsx global>{`
           @keyframes scan {
-            0% { transform: translateY(0); }
-            50% { transform: translateY(130px); }
-            100% { transform: translateY(0); }
+            0% { top: 10%; }
+            50% { top: 90%; }
+            100% { top: 10%; }
+          }
+          .animate-scan {
+            position: absolute;
+            animation: scan 2s linear infinite;
           }
         `}</style>
-
       </div>
     </div>
   );
