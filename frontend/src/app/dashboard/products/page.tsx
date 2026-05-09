@@ -7,7 +7,7 @@ import { Product } from '@/features/products/types/product.types';
 import { containerVariants, itemVariants } from '@/constants/animations';
 import { ProductSkeleton } from '@/components/ProductSkeleton';
 // Scanner bileşenini import ediyoruz
-import BarkodScanner from '@/features/inventory/components/BarkodScanner'; 
+import BarkodScanner from '@/features/inventory/components/BarcodeScanner'; 
 import { LucideScanBarcode, LucideX } from 'lucide-react';
 
 type SearchMode = 'modelAdi' | 'sku' | 'barkod';
