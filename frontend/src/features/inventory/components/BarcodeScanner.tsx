@@ -16,21 +16,20 @@ export default function BarkodScanner({ onResult, onClose }: any) {
   const last = useRef<string | null>(null);
   const lock = useRef(false);
 
-  // İlk açılışta cihazları listele
   useEffect(() => {
     readerRef.current = new BrowserMultiFormatReader();
     BrowserMultiFormatReader.listVideoInputDevices()
       .then((d) => {
         setDevices(d);
-        if (d.length > 0) setDeviceId(d[0].deviceId);
+        // Varsayılan olarak arka kamerayı bulmaya çalış
+        const backCam = d.find(device => device.label.toLowerCase().includes('back') || device.label.toLowerCase().includes('arka'));
+        setDeviceId(backCam ? backCam.deviceId : (d[0]?.deviceId || ''));
       })
       .catch(() => setError('Kamera listesi alınamadı'));
     return () => stop();
   }, []);
 
-  // 🔥 KAMERA DEĞİŞİMİNİ TAKİP EDEN EFFECT
   useEffect(() => {
-    // Eğer tarama aktifse ve deviceId değişirse otomatik yeniden başlat
     if (scanning && deviceId) {
       start();
     }
@@ -41,40 +40,56 @@ export default function BarkodScanner({ onResult, onClose }: any) {
       setError(null);
       if (!videoRef.current || !readerRef.current) return;
       
-      // Önce mevcut akışı durdur (temiz bir geçiş için)
       if (streamRef.current) {
         streamRef.current.getTracks().forEach((t) => t.stop());
       }
 
       setScanning(true);
 
-      const stream = await navigator.mediaDevices.getUserMedia({
+      // 🔥 DAHA İYİ OKUMA İÇİN ÇÖZÜNÜRLÜK AYARI
+      const constraints = {
         video: {
           deviceId: deviceId ? { exact: deviceId } : undefined,
-          // Eğer deviceId yoksa arka kamerayı tercih et
-          facingMode: deviceId ? undefined : { ideal: 'environment' },
-        },
-        audio: false,
-      });
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+          facingMode: 'environment',
+          focusMode: 'continuous' // Destekleyen cihazlarda sürekli netleme
+        }
+      };
 
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
       streamRef.current = stream;
       videoRef.current.srcObject = stream;
       await videoRef.current.play();
 
       readerRef.current.decodeFromStream(stream, videoRef.current, (res) => {
         if (!res || lock.current) return;
-        const code = res.getText();
-        if (last.current === code || !/^\d{13}$/.test(code)) return;
+        
+        const code = res.getText().trim();
+
+        // 🔥 YANLIŞ OKUMAYI ENGELLEMEK İÇİN KONTROLLER
+        // 1. Sadece tam olarak 13 haneli rakamları kabul et (EAN-13 için)
+        if (!/^\d{13}$/.test(code)) return;
+        
+        // 2. Çok hızlı ardışık okumayı engelle
+        if (last.current === code) return;
 
         lock.current = true;
         last.current = code;
-        navigator.vibrate?.(120);
+        
+        // Kullanıcıya geri bildirim (Titreşim)
+        if (navigator.vibrate) navigator.vibrate(150);
+        
         onResult(code);
-        setTimeout(() => { lock.current = false; last.current = null; }, 1500);
+
+        // Bir sonraki okuma için bekleme süresini artırdık (Yanlış stok artışını önler)
+        setTimeout(() => {
+          lock.current = false;
+          last.current = null;
+        }, 3000); // 3 saniye bekle
       });
     } catch (e) {
-      console.error(e);
-      setError('Kamera açılamadı');
+      setError('Kamera başlatılamadı. Lütfen izinleri kontrol edin.');
       setScanning(false);
     }
   };
@@ -95,77 +110,58 @@ export default function BarkodScanner({ onResult, onClose }: any) {
 
   return (
     <div style={{ width: '100%', maxWidth: '380px', margin: '0 auto', background: '#fff', borderRadius: '32px', overflow: 'hidden', boxShadow: '0 20px 40px rgba(0,0,0,0.1)', border: '1px solid #eee' }}>
-      
-      {/* HEADER */}
       <div style={{ padding: '16px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #f0f0f0' }}>
-        <span style={{ fontWeight: 800, color: '#1e293b' }}>Barkod Tarayıcı</span>
-        {onClose && <button onClick={onClose} style={{ border: 'none', background: 'none', color: '#94a3b8', fontSize: '20px', cursor: 'pointer' }}>✕</button>}
+        <span style={{ fontWeight: 800, color: '#1e293b' }}>Hızlı Stok Tarayıcı</span>
+        {onClose && <button onClick={onClose} style={{ border: 'none', background: 'none', color: '#94a3b8', fontSize: '20px' }}>✕</button>}
       </div>
 
-      {/* TARAMA ALANI */}
       <div style={{ position: 'relative', width: '100%', height: '350px', backgroundColor: '#000' }}>
-        <video
-          ref={videoRef}
-          autoPlay
-          playsInline
-          muted
-          style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover', zIndex: 1 }}
-        />
-
-        {/* MASKE */}
+        <video ref={videoRef} autoPlay playsInline muted style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover', zIndex: 1 }} />
+        
         <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', zIndex: 5, pointerEvents: 'none' }}>
-            <svg width="100%" height="100%" style={{ display: 'block' }}>
+            <svg width="100%" height="100%">
                 <defs>
                     <mask id="scanMask">
                         <rect width="100%" height="100%" fill="white" />
                         <rect x="50%" y="50%" width="260" height="160" rx="24" fill="black" transform="translate(-130, -80)" />
                     </mask>
                 </defs>
-                <rect width="100%" height="100%" fill="rgba(0,0,0,0.6)" mask="url(#scanMask)" />
+                <rect width="100%" height="100%" fill="rgba(0,0,0,0.7)" mask="url(#scanMask)" />
             </svg>
         </div>
 
-        {/* ÇERÇEVE */}
         <div style={{ position: 'absolute', top: '50%', left: '50%', width: '260px', height: '160px', zIndex: 10, pointerEvents: 'none', transform: 'translate(-130px, -80px)' }}>
-            <div style={{ position: 'absolute', top: 0, left: 0, width: '32px', height: '32px', borderTop: '5px solid white', borderLeft: '5px solid white', borderTopLeftRadius: '16px' }} />
-            <div style={{ position: 'absolute', top: 0, right: 0, width: '32px', height: '32px', borderTop: '5px solid white', borderRight: '5px solid white', borderTopRightRadius: '16px' }} />
-            <div style={{ position: 'absolute', bottom: 0, left: 0, width: '32px', height: '32px', borderBottom: '5px solid white', borderLeft: '5px solid white', borderBottomLeftRadius: '16px' }} />
-            <div style={{ position: 'absolute', bottom: 0, right: 0, width: '32px', height: '32px', borderBottom: '5px solid white', borderRight: '5px solid white', borderBottomRightRadius: '16px' }} />
-            <div className="scanner-line" style={{ position: 'absolute', left: '10px', right: '10px', height: '3px', background: '#ef4444', boxShadow: '0 0 15px #ef4444' }} />
+            <div style={{ position: 'absolute', top: 0, left: 0, width: '32px', height: '32px', borderTop: '6px solid white', borderLeft: '6px solid white', borderTopLeftRadius: '16px' }} />
+            <div style={{ position: 'absolute', top: 0, right: 0, width: '32px', height: '32px', borderTop: '6px solid white', borderRight: '6px solid white', borderTopRightRadius: '16px' }} />
+            <div style={{ position: 'absolute', bottom: 0, left: 0, width: '32px', height: '32px', borderBottom: '6px solid white', borderLeft: '6px solid white', borderBottomLeftRadius: '16px' }} />
+            <div style={{ position: 'absolute', bottom: 0, right: 0, width: '32px', height: '32px', borderBottom: '6px solid white', borderRight: '6px solid white', borderBottomRightRadius: '16px' }} />
+            <div className="scanner-line" style={{ position: 'absolute', left: '10px', right: '10px', height: '4px', background: '#ef4444', boxShadow: '0 0 20px red' }} />
         </div>
       </div>
 
-      {/* KONTROLLER */}
       <div style={{ padding: '24px', background: '#fff' }}>
         <select
-          style={{ width: '100%', padding: '12px', borderRadius: '12px', border: '2px solid #f1f5f9', marginBottom: '16px', outline: 'none', fontSize: '14px', backgroundColor: '#fcfcfc' }}
+          style={{ width: '100%', padding: '12px', borderRadius: '12px', border: '2px solid #f1f5f9', marginBottom: '16px', outline: 'none' }}
           value={deviceId}
           onChange={(e) => setDeviceId(e.target.value)}
         >
           {devices.map((d) => (
-            <option key={d.deviceId} value={d.deviceId}>
-              {d.label || `Kamera ${devices.indexOf(d) + 1}`}
-            </option>
+            <option key={d.deviceId} value={d.deviceId}>{d.label || `Kamera ${devices.indexOf(d) + 1}`}</option>
           ))}
         </select>
 
         <button
           onClick={scanning ? stop : start}
-          style={{ width: '100%', padding: '16px', borderRadius: '16px', fontWeight: 900, color: '#fff', border: 'none', cursor: 'pointer', background: scanning ? '#ef4444' : '#2563eb', transition: '0.2s' }}
+          style={{ width: '100%', padding: '16px', borderRadius: '16px', fontWeight: 900, color: '#fff', border: 'none', background: scanning ? '#ef4444' : '#2563eb' }}
         >
           {scanning ? 'DURDUR' : 'TARAMAYI BAŞLAT'}
         </button>
+        {error && <p style={{ color: 'red', textAlign: 'center', fontSize: '11px', marginTop: '8px' }}>{error}</p>}
       </div>
 
       <style jsx global>{`
-        @keyframes scanMove {
-          0% { top: 15%; opacity: 0.4; }
-          50% { top: 85%; opacity: 1; }
-          100% { top: 15%; opacity: 0.4; }
-        }
-        .scanner-line {
-          animation: scanMove 2s ease-in-out infinite;
-        }
+        @keyframes scanMove { 0% { top: 15%; } 50% { top: 85%; } 100% { top: 15%; } }
+        .scanner-line { animation: scanMove 2s linear infinite; }
       `}</style>
     </div>
   );
