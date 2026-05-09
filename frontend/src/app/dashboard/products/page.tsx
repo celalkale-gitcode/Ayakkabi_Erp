@@ -6,7 +6,7 @@ import { productsApi } from '@/features/products/services/productsApi';
 import { Product } from '@/features/products/types/product.types';
 import { containerVariants, itemVariants } from '@/constants/animations';
 import { ProductSkeleton } from '@/components/ProductSkeleton';
-// Scanner bileşenini import ediyoruz
+// Dosya adını ve yolunu projenizdeki fiziksel dosya adıyla (BarcodeScanner.tsx) eşitledik
 import BarkodScanner from '@/features/inventory/components/BarcodeScanner'; 
 import { LucideScanBarcode, LucideX } from 'lucide-react';
 
@@ -69,7 +69,7 @@ export default function ProductsPage() {
             {query && (
               <button 
                 onClick={() => setQuery('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
               >
                 <LucideX size={18} />
               </button>
@@ -78,7 +78,7 @@ export default function ProductsPage() {
 
           <button
             onClick={() => setShowScanner(!showScanner)}
-            className={`flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl font-semibold transition-all ${
+            className={`flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl font-semibold transition-all duration-300 ${
               showScanner 
                 ? 'bg-red-500 text-white shadow-lg shadow-red-200' 
                 : 'bg-slate-900 text-white hover:bg-slate-800 shadow-lg shadow-slate-200'
@@ -91,14 +91,14 @@ export default function ProductsPage() {
       </div>
 
       <main className="max-w-7xl mx-auto p-6">
-        {/* SCANNER MODAL SECTION */}
+        {/* SCANNER SECTION */}
         <AnimatePresence>
           {showScanner && (
             <motion.div
-              initial={{ opacity: 0, y: -20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              className="mb-8"
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              className="mb-8 overflow-hidden"
             >
               <BarkodScanner 
                 onResult={handleBarcodeResult} 
@@ -112,7 +112,7 @@ export default function ProductsPage() {
           <div>
             <h1 className="text-3xl font-extrabold tracking-tight text-slate-800">Ürün Katalogu</h1>
             <p className="text-slate-500 mt-1">
-              {loading ? 'Yükleniyor...' : `${filteredProducts.length} ürün listelendi`}
+              {loading ? 'Yükleniyor...' : `${filteredProducts.length} ürün bulundu`}
             </p>
           </div>
         </header>
@@ -134,31 +134,31 @@ export default function ProductsPage() {
                   key={p.id}
                   variants={itemVariants}
                   layout
-                  className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm hover:shadow-xl hover:border-blue-200 transition-all duration-300 group overflow-hidden"
+                  className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm hover:shadow-xl hover:border-blue-200 transition-all duration-300 group"
                 >
-                  {/* Ürün Bilgisi Alt Bölüm */}
                   <div className="mb-4">
                     <h2 className="font-bold text-xl group-hover:text-blue-600 transition-colors truncate">
                       {p.modelAdi}
                     </h2>
                     <div className="flex gap-2 mt-2">
-                      <span className="text-[11px] font-bold uppercase tracking-wider bg-slate-100 text-slate-600 px-2 py-1 rounded-lg">
+                      <span className="text-[11px] font-bold bg-slate-100 text-slate-600 px-2 py-1 rounded-lg uppercase tracking-wider">
                         {p.modelKodu}
                       </span>
-                      <span className="text-[11px] font-bold uppercase tracking-wider bg-blue-50 text-blue-600 px-2 py-1 rounded-lg">
-                        {p.marka || 'Markasız'}
-                      </span>
+                      {p.marka && (
+                        <span className="text-[11px] font-bold bg-blue-50 text-blue-600 px-2 py-1 rounded-lg uppercase tracking-wider">
+                          {p.marka}
+                        </span>
+                      )}
                     </div>
                   </div>
 
-                  {/* Varyantlar Listesi */}
                   <div className="space-y-3">
                     {p.varyantlar?.map((v) => (
-                      <div key={v.id} className="border border-slate-100 rounded-xl p-3 bg-slate-50/50 hover:bg-white transition-colors">
+                      <div key={v.id} className="border border-slate-50 rounded-xl p-3 bg-slate-50/50 hover:bg-white hover:border-slate-200 transition-all">
                         <div className="flex justify-between items-center text-sm">
-                          <span className="font-semibold text-slate-700">{v.renk} <span className="text-slate-300 mx-1">|</span> {v.beden}</span>
+                          <span className="font-semibold text-slate-700">{v.renk} / {v.beden}</span>
                           <span className={`px-2 py-0.5 rounded-md text-xs font-bold ${v.stokMiktari > 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                            {v.stokMiktari} Stok
+                            {v.stokMiktari} Adet
                           </span>
                         </div>
                         <div className="flex flex-wrap gap-1 mt-2">
@@ -178,9 +178,18 @@ export default function ProductsPage() {
         )}
 
         {!loading && filteredProducts.length === 0 && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-24 bg-white rounded-3xl border-2 border-dashed border-slate-200">
-            <p className="text-slate-400 text-lg font-medium">Aradığınız kriterlere uygun ürün bulunamadı.</p>
-            <button onClick={() => setQuery('')} className="mt-4 text-blue-600 font-bold hover:underline">Aramayı Temizle</button>
+          <motion.div 
+            initial={{ opacity: 0 }} 
+            animate={{ opacity: 1 }} 
+            className="text-center py-24 bg-white rounded-3xl border-2 border-dashed border-slate-200"
+          >
+            <p className="text-slate-400 text-lg">Eşleşen ürün bulunamadı.</p>
+            <button 
+              onClick={() => setQuery('')} 
+              className="mt-4 text-blue-600 font-bold hover:text-blue-800 transition-colors"
+            >
+              Aramayı Sıfırla
+            </button>
           </motion.div>
         )}
       </main>
