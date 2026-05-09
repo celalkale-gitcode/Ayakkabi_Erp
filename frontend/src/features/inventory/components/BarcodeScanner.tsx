@@ -78,88 +78,87 @@ export default function BarkodScanner({ onResult, onClose }: any) {
   };
 
   return (
-    <div className="w-full flex justify-center p-2">
-      <div className="w-full max-w-sm bg-white rounded-[2rem] shadow-2xl border overflow-hidden flex flex-col">
-        
-        {/* HEADER */}
-        <div className="flex justify-between items-center px-6 py-4 bg-white border-b">
-          <h3 className="font-bold text-slate-800 text-base">Barkod Tara</h3>
-          {onClose && <button onClick={onClose} className="text-slate-400 text-xl hover:text-red-500 transition">✕</button>}
-        </div>
+    <div className="flex flex-col items-center w-full max-w-md mx-auto bg-white rounded-[2rem] shadow-xl overflow-hidden border border-slate-100">
+      
+      {/* HEADER */}
+      <div className="w-full flex justify-between items-center px-6 py-4 border-b bg-white z-50">
+        <span className="font-bold text-slate-800">Barkod Tarayıcı</span>
+        {onClose && <button onClick={onClose} className="p-1 text-slate-400">✕</button>}
+      </div>
 
-        {/* CAMERA AREA */}
-        <div className="relative w-full h-[400px] bg-black overflow-hidden">
-          <video
-            ref={videoRef}
-            autoPlay
-            playsInline
-            muted
-            className="absolute inset-0 w-full h-full object-cover"
-          />
+      {/* TARAMA ALANI (VİDEO VE ÇERÇEVE BURADA BİRLEŞİK) */}
+      <div className="relative w-full h-[350px] bg-black overflow-hidden">
+        {/* VIDEO - EN ALTTA */}
+        <video
+          ref={videoRef}
+          autoPlay
+          playsInline
+          muted
+          className="absolute inset-0 w-full h-full object-cover"
+        />
 
-          {/* 🔥 DİNAMİK MASKE KATMANI (Orta aydınlık, dışı koyu) */}
-          <svg className="absolute inset-0 w-full h-full z-10 pointer-events-none">
+        {/* MASKE VE ÇERÇEVE - VİDEONUN ÜSTÜNDE */}
+        <div className="absolute inset-0 z-10 pointer-events-none flex items-center justify-center">
+          {/* SVG Maske: Kenarları koyulaştırır, ortayı açar */}
+          <svg className="absolute inset-0 w-full h-full">
             <defs>
-              <mask id="overlay-mask">
+              <mask id="hole">
                 <rect width="100%" height="100%" fill="white" />
-                {/* Bu dikdörtgen orta alanı "delerek" aydınlık bırakır */}
-                <rect x="50%" y="50%" width="260" height="160" fill="black" rx="20" transform="translate(-130, -80)" />
+                <rect x="50%" y="50%" width="250" height="150" rx="20" fill="black" transform="translate(-125, -75)" />
               </mask>
             </defs>
-            {/* Maskeyi uygulayan koyu katman */}
-            <rect width="100%" height="100%" fill="rgba(0,0,0,0.65)" mask="url(#overlay-mask)" />
+            <rect width="100%" height="100%" fill="rgba(0,0,0,0.6)" mask="url(#hole)" />
           </svg>
 
-          {/* FRAME LAYER (Köşe çizgileri) */}
-          <div className="absolute inset-0 z-20 flex items-center justify-center pointer-events-none">
-            <div className="relative w-[260px] h-[160px]">
-              
-              {/* Beyaz Köşeler */}
-              <div className="absolute top-0 left-0 w-10 h-10 border-t-[5px] border-l-[5px] border-white rounded-tl-2xl" />
-              <div className="absolute top-0 right-0 w-10 h-10 border-t-[5px] border-r-[5px] border-white rounded-tr-2xl" />
-              <div className="absolute bottom-0 left-0 w-10 h-10 border-b-[5px] border-l-[5px] border-white rounded-bl-2xl" />
-              <div className="absolute bottom-0 right-0 w-10 h-10 border-b-[5px] border-r-[5px] border-white rounded-br-2xl" />
-
-              {/* Tarama Çizgisi */}
-              <div className="absolute left-4 right-4 h-[3px] bg-red-500 shadow-[0_0_20px_red] animate-scan" />
-            </div>
+          {/* 4 KÖŞE ÇERÇEVE ÇİZGİLERİ */}
+          <div className="relative w-[250px] h-[150px]">
+            <div className="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-white rounded-tl-xl" />
+            <div className="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-white rounded-tr-xl" />
+            <div className="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-white rounded-bl-xl" />
+            <div className="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-white rounded-br-xl" />
+            
+            {/* HAREKETLİ TARAMA ÇİZGİSİ */}
+            <div className="absolute left-2 right-2 h-0.5 bg-red-500 shadow-[0_0_15px_red] animate-scan-fast" />
           </div>
         </div>
-
-        {/* CONTROLS */}
-        <div className="p-5 space-y-4 bg-white">
-          <select
-            className="w-full border-2 border-slate-100 rounded-2xl p-3 text-sm bg-slate-50 outline-none focus:border-blue-500 transition"
-            value={deviceId}
-            onChange={(e) => setDeviceId(e.target.value)}
-          >
-            {devices.map((d) => (
-              <option key={d.deviceId} value={d.deviceId}>{d.label || 'Kamera'}</option>
-            ))}
-          </select>
-
-          <button
-            onClick={scanning ? stop : start}
-            className={`w-full py-4 rounded-2xl font-black text-white uppercase tracking-wider transition-all active:scale-95 ${
-              scanning ? 'bg-red-500 shadow-xl shadow-red-200' : 'bg-blue-600 shadow-xl shadow-blue-200'
-            }`}
-          >
-            {scanning ? 'DURDUR' : 'KAMERAYI BAŞLAT'}
-          </button>
-        </div>
-
-        <style jsx global>{`
-          @keyframes scan {
-            0% { top: 15%; opacity: 0.3; }
-            50% { top: 85%; opacity: 1; }
-            100% { top: 15%; opacity: 0.3; }
-          }
-          .animate-scan {
-            position: absolute;
-            animation: scan 2s ease-in-out infinite;
-          }
-        `}</style>
       </div>
+
+      {/* KONTROLLER - EN ALTTA */}
+      <div className="w-full p-6 bg-white space-y-4">
+        <select
+          className="w-full border-2 border-slate-100 rounded-xl p-3 text-sm focus:border-blue-500 outline-none"
+          value={deviceId}
+          onChange={(e) => setDeviceId(e.target.value)}
+        >
+          {devices.map((d) => (
+            <option key={d.deviceId} value={d.deviceId}>{d.label || `Kamera ${devices.indexOf(d) + 1}`}</option>
+          ))}
+        </select>
+
+        <button
+          onClick={scanning ? stop : start}
+          className={`w-full py-4 rounded-2xl font-bold text-white transition-all active:scale-95 ${
+            scanning ? 'bg-red-500' : 'bg-blue-600 shadow-lg shadow-blue-100'
+          }`}
+        >
+          {scanning ? 'DURDUR' : 'TARAMAYI BAŞLAT'}
+        </button>
+
+        {error && <p className="text-red-500 text-center text-xs">{error}</p>}
+      </div>
+
+      <style jsx global>{`
+        @keyframes scanLine {
+          0% { top: 10%; }
+          50% { top: 90%; }
+          100% { top: 10%; }
+        }
+        .animate-scan-fast {
+          position: absolute;
+          animation: scanLine 2s linear infinite;
+        }
+      `}</style>
     </div>
   );
 }
+
