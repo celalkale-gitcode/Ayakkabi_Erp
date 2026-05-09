@@ -1,568 +1,122 @@
 'use client';
 
-import {
-  useEffect,
-  useMemo,
-  useState,
-} from 'react';
-
-import {
-  motion,
-  AnimatePresence,
-} from 'framer-motion';
-
-import {
-  LucideScanBarcode,
-  LucideX,
+import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { 
+  Plus, 
+  Search, 
+  Filter, 
+  QrCode,
+  X,
+  Package,
+  List
 } from 'lucide-react';
-
-import { productsApi }
-  from '@/features/products/services/productsApi';
-
-import {
-  Product,
-} from '@/features/products/types/product.types';
-
-import {
-  containerVariants,
-  itemVariants,
-} from '@/constants/animations';
-
-import {
-  ProductSkeleton,
-} from '@/components/ProductSkeleton';
-
-import BarcodeScanner
-  from '@/features/inventory/components/BarcodeScanner';
-
-type SearchMode =
-  | 'modelAdi'
-  | 'sku'
-  | 'barkod';
+import { useProducts } from '@/features/products/hooks/useProducts'; // Mevcut hook'un
+import BarcodeScanner from '@/features/inventory/components/BarcodeScanner';
+import ProductTable from '@/features/products/components/ProductTable';
+import { toast } from 'react-hot-toast';
 
 export default function ProductsPage() {
+  const { products, loading: initialLoading, deleteProduct } = useProducts();
+  const [searchTerm, setSearchTerm] = useState('');
+  const [showScanner, setShowScanner] = useState(false);
 
-  const [products, setProducts] =
-    useState<Product[]>([]);
-
-  const [loading, setLoading] =
-    useState(true);
-
-  const [searchMode, setSearchMode] =
-    useState<SearchMode>('modelAdi');
-
-  const [query, setQuery] =
-    useState('');
-
-  const [showScanner, setShowScanner] =
-    useState(false);
-
-  useEffect(() => {
-
-    productsApi
-      .getAll()
-      .then((data) => {
-
-        setProducts(data || []);
-        setLoading(false);
-      });
-
-  }, []);
-
-  // FILTER
-  const filteredProducts =
-    useMemo(() => {
-
-      if (!query.trim()) {
-        return products;
-      }
-
-      const q =
-        query.toLowerCase();
-
-      return products.filter((p) => {
-
-        if (
-          searchMode ===
-          'modelAdi'
-        ) {
-
-          return p.modelAdi
-            ?.toLowerCase()
-            .includes(q);
-        }
-
-        if (
-          searchMode === 'sku'
-        ) {
-
-          return p.varyantlar?.some(
-            (v) =>
-              v.sku
-                ?.toLowerCase()
-                .includes(q),
-          );
-        }
-
-        if (
-          searchMode ===
-          'barkod'
-        ) {
-
-          return p.varyantlar?.some(
-            (v) =>
-              v.barkodlar?.some(
-                (b) =>
-                  b.barkod
-                    ?.toLowerCase()
-                    .includes(q),
-              ),
-          );
-        }
-
-        return false;
-
-      });
-
-    }, [
-      products,
-      query,
-      searchMode,
-    ]);
-
-  // BARKOD SONUCU
-  const handleBarcodeResult =
-    (result: string) => {
-
-      setSearchMode('barkod');
-
-      setQuery(result);
-
-      setShowScanner(false);
-    };
+  // BARKOD TARAMA SONUCU
+  const handleScan = async (barcode: string) => {
+    // Sayfa içinde ekstra bir "İşleniyor" yazısına gerek yok, 
+    // BarcodeScanner bileşeni bunu kendi içinde hallediyor.
+    try {
+      // Örnek: Barkodla ürün arama veya detay getirme işlemi
+      toast.success(`Ürün bulundu: ${barcode}`);
+      // Buraya barkodla ilgili yapmak istediğin mantığı ekleyebilirsin
+    } catch (error) {
+      toast.error("İşlem sırasında bir hata oluştu");
+    }
+  };
 
   return (
-
-    <div className="min-h-screen bg-[#f8fafc] text-slate-900">
-
-      {/* HEADER */}
-      <div className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-200 p-4 shadow-sm">
-
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row gap-3 items-center">
-
-          {/* SEARCH MODE */}
-          <select
-            value={searchMode}
-            onChange={(e) =>
-              setSearchMode(
-                e.target
-                  .value as SearchMode,
-              )
-            }
-            className="
-              w-full md:w-1/4
-              border border-slate-200
-              rounded-xl
-              px-3 py-2.5
-              text-sm
-              focus:ring-2
-              focus:ring-blue-500
-              outline-none
-              bg-white
-            "
-          >
-
-            <option value="modelAdi">
-              Ürün Adı
-            </option>
-
-            <option value="sku">
-              SKU Kodu
-            </option>
-
-            <option value="barkod">
-              Barkod
-            </option>
-
-          </select>
-
-          {/* SEARCH */}
-          <div className="relative flex-1 w-full">
-
-            <input
-              value={query}
-              onChange={(e) =>
-                setQuery(
-                  e.target.value,
-                )
-              }
-              placeholder="Arama yap..."
-              className="
-                w-full
-                border border-slate-200
-                rounded-xl
-                px-4 py-2.5
-                focus:ring-2
-                focus:ring-blue-500
-                outline-none
-              "
-            />
-
-            {query && (
-
-              <button
-                onClick={() =>
-                  setQuery('')
-                }
-                className="
-                  absolute
-                  right-3
-                  top-1/2
-                  -translate-y-1/2
-                  text-slate-400
-                  hover:text-slate-600
-                "
-              >
-
-                <LucideX size={18} />
-
-              </button>
-            )}
-
-          </div>
-
-          {/* BARKOD BUTTON */}
-          <button
-            onClick={() =>
-              setShowScanner(
-                !showScanner,
-              )
-            }
-            className={`
-              flex items-center justify-center gap-2
-              px-6 py-2.5
-              rounded-xl
-              font-semibold
-              transition-all duration-300
-
-              ${
-                showScanner
-                  ? 'bg-red-500 text-white'
-                  : 'bg-slate-900 text-white'
-              }
-            `}
-          >
-
-            {showScanner
-              ? (
-                <LucideX size={20} />
-              )
-              : (
-                <LucideScanBarcode size={20} />
-              )}
-
-            <span className="hidden md:inline">
-
-              {showScanner
-                ? 'Kapat'
-                : 'Barkod'}
-
-            </span>
-
-          </button>
-
+    <div className="p-4 md:p-8 space-y-6">
+      {/* ÜST BAŞLIK VE BUTONLAR */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
+            <Package className="text-blue-600" /> Ürün Portföyü
+          </h1>
+          <p className="text-slate-500 text-sm">Sistemdeki tüm ayakkabı modellerini yönetin.</p>
         </div>
-
+        
+        <div className="flex items-center gap-3">
+          <button 
+            onClick={() => setShowScanner(true)}
+            className="flex items-center gap-2 px-5 py-2.5 bg-slate-900 text-white rounded-2xl hover:bg-slate-800 transition-all shadow-lg"
+          >
+            <QrCode size={18} />
+            <span className="font-semibold text-sm">Barkod Tara</span>
+          </button>
+          
+          <button className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-2xl hover:bg-blue-700 transition-all shadow-lg shadow-blue-200">
+            <Plus size={18} />
+            <span className="font-semibold text-sm">Yeni Ekle</span>
+          </button>
+        </div>
       </div>
 
-      {/* CONTENT */}
-      <main className="max-w-7xl mx-auto p-6">
+      {/* ARAMA ÇUBUĞU */}
+      <div className="bg-white p-2 rounded-2xl border border-slate-100 shadow-sm flex items-center px-4">
+        <Search className="text-slate-400" size={20} />
+        <input 
+          type="text"
+          placeholder="Model adı veya barkod ile hızlı ara..."
+          className="flex-1 p-3 outline-none text-sm"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+        />
+      </div>
 
-        {/* SCANNER */}
-        <AnimatePresence>
+      {/* TABLO BÖLÜMÜ */}
+      <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
+        <ProductTable 
+          products={products.filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase()))} 
+          loading={initialLoading} 
+        />
+      </div>
 
-          {showScanner && (
-
+      {/* TARAYICI MODALI (SADECE BİZİM PROFESYONEL SCANNER) */}
+      <AnimatePresence>
+        {showScanner && (
+          <div className="fixed inset-0 z-[999] flex items-center justify-center p-4">
             <motion.div
-              initial={{
-                opacity: 0,
-                height: 0,
-              }}
-              animate={{
-                opacity: 1,
-                height: 'auto',
-              }}
-              exit={{
-                opacity: 0,
-                height: 0,
-              }}
-              className="mb-8 overflow-hidden"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-slate-900/40 backdrop-blur-md"
+              onClick={() => setShowScanner(false)}
+            />
+            
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="relative w-full max-w-sm"
             >
+              {/* Kapatma butonu - Tarayıcının hemen üstünde */}
+              <button 
+                onClick={() => setShowScanner(false)}
+                className="absolute -top-12 right-0 flex items-center gap-2 text-white/80 hover:text-white"
+              >
+                <span className="text-sm font-bold uppercase tracking-widest">Kapat</span>
+                <X size={24} />
+              </button>
 
-              {/* DÜZELTİLDİ */}
-              <BarcodeScanner
-                onResult={
-                  handleBarcodeResult
-                }
-                onClose={() =>
-                  setShowScanner(
-                    false,
-                  )
-                }
+              {/* Bizim tasarladığımız BarcodeScanner bileşeni */}
+              <BarcodeScanner 
+                onResult={handleScan}
+                onClose={() => setShowScanner(false)}
               />
-
             </motion.div>
-          )}
-
-        </AnimatePresence>
-
-        {/* TITLE */}
-        <header className="flex justify-between items-end mb-8">
-
-          <div>
-
-            <h1 className="text-3xl font-extrabold tracking-tight text-slate-800">
-
-              Ürün Kataloğu
-
-            </h1>
-
-            <p className="text-slate-500 mt-1">
-
-              {loading
-                ? 'Yükleniyor...'
-                : `${filteredProducts.length} ürün bulundu`}
-
-            </p>
-
           </div>
-
-        </header>
-
-        {/* LOADING */}
-        {loading ? (
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-
-            {[...Array(6)].map(
-              (_, i) => (
-
-                <ProductSkeleton
-                  key={i}
-                />
-              ),
-            )}
-
-          </div>
-
-        ) : (
-
-          <motion.div
-            variants={
-              containerVariants
-            }
-            initial="hidden"
-            animate="visible"
-            className="
-              grid
-              grid-cols-1
-              md:grid-cols-2
-              lg:grid-cols-3
-              gap-6
-            "
-          >
-
-            <AnimatePresence mode="popLayout">
-
-              {filteredProducts.map(
-                (p) => (
-
-                  <motion.div
-                    key={p.id}
-                    variants={
-                      itemVariants
-                    }
-                    layout
-                    className="
-                      bg-white
-                      p-5
-                      rounded-2xl
-                      border
-                      border-slate-200
-                      shadow-sm
-                      hover:shadow-xl
-                      transition-all
-                    "
-                  >
-
-                    {/* PRODUCT */}
-                    <div className="mb-4">
-
-                      <h2 className="font-bold text-xl">
-
-                        {p.modelAdi}
-
-                      </h2>
-
-                      <div className="flex gap-2 mt-2">
-
-                        <span className="
-                          text-[11px]
-                          font-bold
-                          bg-slate-100
-                          text-slate-600
-                          px-2 py-1
-                          rounded-lg
-                        ">
-
-                          {p.modelKodu}
-
-                        </span>
-
-                        {p.marka && (
-
-                          <span className="
-                            text-[11px]
-                            font-bold
-                            bg-blue-50
-                            text-blue-600
-                            px-2 py-1
-                            rounded-lg
-                          ">
-
-                            {p.marka}
-
-                          </span>
-                        )}
-
-                      </div>
-
-                    </div>
-
-                    {/* VARIANTS */}
-                    <div className="space-y-3">
-
-                      {p.varyantlar?.map(
-                        (v) => (
-
-                          <div
-                            key={v.id}
-                            className="
-                              border
-                              rounded-xl
-                              p-3
-                              bg-slate-50
-                            "
-                          >
-
-                            <div className="
-                              flex
-                              justify-between
-                              items-center
-                              text-sm
-                            ">
-
-                              {/* DÜZELTİLEN FORMAT */}
-                              <span className="
-                                font-semibold
-                                text-slate-700
-                              ">
-
-                                {v.renk}
-                                {' / '}
-                                {v.beden}
-                                {' / '}
-                                Stok:
-                                {' '}
-                                {v.stokMiktari}
-
-                              </span>
-
-                            </div>
-
-                            {/* BARKOD */}
-                            <div className="
-                              flex flex-wrap
-                              gap-1
-                              mt-2
-                            ">
-
-                              {v.barkodlar?.map(
-                                (b) => (
-
-                                  <span
-                                    key={b.id}
-                                    className="
-                                      text-[10px]
-                                      font-mono
-                                      bg-white
-                                      border
-                                      border-slate-200
-                                      px-2 py-0.5
-                                      rounded
-                                      text-slate-500
-                                    "
-                                  >
-
-                                    {b.barkod}
-
-                                  </span>
-                                ),
-                              )}
-
-                            </div>
-
-                          </div>
-                        ),
-                      )}
-
-                    </div>
-
-                  </motion.div>
-                ),
-              )}
-
-            </AnimatePresence>
-
-          </motion.div>
         )}
-
-        {/* EMPTY */}
-        {!loading &&
-          filteredProducts.length === 0 && (
-
-          <motion.div
-            initial={{
-              opacity: 0,
-            }}
-            animate={{
-              opacity: 1,
-            }}
-            className="
-              text-center
-              py-24
-              bg-white
-              rounded-3xl
-              border-2
-              border-dashed
-              border-slate-200
-            "
-          >
-
-            <p className="
-              text-slate-400
-              text-lg
-            ">
-
-              Eşleşen ürün bulunamadı.
-
-            </p>
-
-          </motion.div>
-        )}
-
-      </main>
-
+      </AnimatePresence>
     </div>
   );
 }
