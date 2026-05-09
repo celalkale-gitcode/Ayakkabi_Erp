@@ -7,7 +7,7 @@ import { Product } from '@/features/products/types/product.types';
 import { containerVariants, itemVariants } from '@/constants/animations';
 import { ProductSkeleton } from '@/components/ProductSkeleton';
 // Dosya adını ve yolunu projenizdeki fiziksel dosya adıyla (BarcodeScanner.tsx) eşitledik
-import BarkodScanner from '@/features/inventory/components/BarcodeScanner'; 
+import BarcodeScanner from '@/features/inventory/components/BarcodeScanner'; 
 import { LucideScanBarcode, LucideX } from 'lucide-react';
 
 type SearchMode = 'modelAdi' | 'sku' | 'barkod';
