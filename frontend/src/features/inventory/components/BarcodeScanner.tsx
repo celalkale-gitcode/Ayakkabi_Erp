@@ -78,55 +78,57 @@ export default function BarkodScanner({ onResult, onClose }: any) {
   };
 
   return (
-    <div className="flex flex-col items-center w-full max-w-md mx-auto bg-white rounded-[2rem] shadow-xl overflow-hidden border border-slate-100">
+    <div style={{ position: 'relative', width: '100%', maxWidth: '400px', margin: '0 auto', background: '#fff', borderRadius: '24px', overflow: 'hidden', border: '1px solid #eee' }}>
       
       {/* HEADER */}
-      <div className="w-full flex justify-between items-center px-6 py-4 border-b bg-white z-50">
-        <span className="font-bold text-slate-800">Barkod Tarayıcı</span>
-        {onClose && <button onClick={onClose} className="p-1 text-slate-400">✕</button>}
+      <div style={{ padding: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #eee' }}>
+        <span style={{ fontWeight: 'bold' }}>Barkod Tarayıcı</span>
+        {onClose && <button onClick={onClose} style={{ color: '#999', fontSize: '20px' }}>✕</button>}
       </div>
 
-      {/* TARAMA ALANI (VİDEO VE ÇERÇEVE BURADA BİRLEŞİK) */}
-      <div className="relative w-full h-[350px] bg-black overflow-hidden">
-        {/* VIDEO - EN ALTTA */}
+      {/* TARAMA ALANI KAPSAYICISI */}
+      <div style={{ position: 'relative', width: '100%', height: '350px', background: '#000', overflow: 'hidden' }}>
+        
+        {/* 1. KATMAN: VİDEO */}
         <video
           ref={videoRef}
           autoPlay
           playsInline
           muted
-          className="absolute inset-0 w-full h-full object-cover"
+          style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover', zIndex: 1 }}
         />
 
-        {/* MASKE VE ÇERÇEVE - VİDEONUN ÜSTÜNDE */}
-        <div className="absolute inset-0 z-10 pointer-events-none flex items-center justify-center">
-          {/* SVG Maske: Kenarları koyulaştırır, ortayı açar */}
-          <svg className="absolute inset-0 w-full h-full">
+        {/* 2. KATMAN: MASKE VE ÇERÇEVE */}
+        <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', zIndex: 10, pointerEvents: 'none', display: 'flex', alignItems: 'center', justifyCenter: 'center' }}>
+          
+          {/* SVG Maske */}
+          <svg style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}>
             <defs>
               <mask id="hole">
                 <rect width="100%" height="100%" fill="white" />
-                <rect x="50%" y="50%" width="250" height="150" rx="20" fill="black" transform="translate(-125, -75)" />
+                <rect x="50%" y="50%" width="260" height="160" rx="20" fill="black" transform="translate(-130, -80)" />
               </mask>
             </defs>
             <rect width="100%" height="100%" fill="rgba(0,0,0,0.6)" mask="url(#hole)" />
           </svg>
 
-          {/* 4 KÖŞE ÇERÇEVE ÇİZGİLERİ */}
-          <div className="relative w-[250px] h-[150px]">
-            <div className="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-white rounded-tl-xl" />
-            <div className="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-white rounded-tr-xl" />
-            <div className="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-white rounded-bl-xl" />
-            <div className="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-white rounded-br-xl" />
+          {/* Köşe Çizgileri */}
+          <div style={{ position: 'absolute', top: '50%', left: '50%', width: '260px', height: '160px', transform: 'translate(-130px, -80px)' }}>
+            <div style={{ position: 'absolute', top: 0, left: 0, width: '32px', height: '32px', borderTop: '4px solid #fff', borderLeft: '4px solid #fff', borderTopLeftRadius: '16px' }} />
+            <div style={{ position: 'absolute', top: 0, right: 0, width: '32px', height: '32px', borderTop: '4px solid #fff', borderRight: '4px solid #fff', borderTopRightRadius: '16px' }} />
+            <div style={{ position: 'absolute', bottom: 0, left: 0, width: '32px', height: '32px', borderBottom: '4px solid #fff', borderLeft: '4px solid #fff', borderBottomLeftRadius: '16px' }} />
+            <div style={{ position: 'absolute', bottom: 0, right: 0, width: '32px', height: '32px', borderBottom: '4px solid #fff', borderRight: '4px solid #fff', borderBottomRightRadius: '16px' }} />
             
-            {/* HAREKETLİ TARAMA ÇİZGİSİ */}
-            <div className="absolute left-2 right-2 h-0.5 bg-red-500 shadow-[0_0_15px_red] animate-scan-fast" />
+            {/* Tarama Çizgisi */}
+            <div className="scan-line-animation" style={{ position: 'absolute', left: '8px', right: '8px', height: '2px', background: 'red', boxShadow: '0 0 15px red' }} />
           </div>
         </div>
       </div>
 
-      {/* KONTROLLER - EN ALTTA */}
-      <div className="w-full p-6 bg-white space-y-4">
+      {/* KONTROLLER */}
+      <div style={{ padding: '20px', background: '#fff' }}>
         <select
-          className="w-full border-2 border-slate-100 rounded-xl p-3 text-sm focus:border-blue-500 outline-none"
+          style={{ width: '100%', padding: '12px', borderRadius: '12px', border: '2px solid #f0f0f0', marginBottom: '16px', outline: 'none' }}
           value={deviceId}
           onChange={(e) => setDeviceId(e.target.value)}
         >
@@ -137,28 +139,23 @@ export default function BarkodScanner({ onResult, onClose }: any) {
 
         <button
           onClick={scanning ? stop : start}
-          className={`w-full py-4 rounded-2xl font-bold text-white transition-all active:scale-95 ${
-            scanning ? 'bg-red-500' : 'bg-blue-600 shadow-lg shadow-blue-100'
-          }`}
+          style={{ width: '100%', padding: '16px', borderRadius: '16px', fontWeight: 'bold', color: '#fff', border: 'none', cursor: 'pointer', transition: '0.2s', background: scanning ? '#ef4444' : '#2563eb' }}
         >
           {scanning ? 'DURDUR' : 'TARAMAYI BAŞLAT'}
         </button>
-
-        {error && <p className="text-red-500 text-center text-xs">{error}</p>}
+        {error && <p style={{ color: 'red', textAlign: 'center', fontSize: '12px', marginTop: '10px' }}>{error}</p>}
       </div>
 
       <style jsx global>{`
-        @keyframes scanLine {
+        @keyframes scanMove {
           0% { top: 10%; }
           50% { top: 90%; }
           100% { top: 10%; }
         }
-        .animate-scan-fast {
-          position: absolute;
-          animation: scanLine 2s linear infinite;
+        .scan-line-animation {
+          animation: scanMove 2s linear infinite;
         }
       `}</style>
     </div>
   );
 }
-
