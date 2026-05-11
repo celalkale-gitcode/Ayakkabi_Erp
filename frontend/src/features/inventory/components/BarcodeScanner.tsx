@@ -17,7 +17,8 @@ export default function MobilStokScanner({ onResult, onClose }: any) {
   const lock = useRef(false);
 
   useEffect(() => {
-    const hints = new Map();
+    const hints = new Map<DecodeHintType, any>();
+
     const formats = [
       BarcodeFormat.EAN_13,
       BarcodeFormat.EAN_8,
@@ -29,9 +30,11 @@ export default function MobilStokScanner({ onResult, onClose }: any) {
     hints.set(DecodeHintType.POSSIBLE_FORMATS, formats);
     hints.set(DecodeHintType.TRY_HARDER, true);
 
-    readerRef.current = new BrowserMultiFormatReader(hints);
+    const reader = new BrowserMultiFormatReader(hints);
+    readerRef.current = reader;
 
-    BrowserMultiFormatReader.listVideoInputDevices()
+    reader
+      .listVideoInputDevices()
       .then((d) => {
         setDevices(d);
 
@@ -51,6 +54,7 @@ export default function MobilStokScanner({ onResult, onClose }: any) {
   const start = async () => {
     try {
       setError(null);
+
       if (!videoRef.current || !readerRef.current) return;
 
       setScanning(true);
@@ -80,9 +84,10 @@ export default function MobilStokScanner({ onResult, onClose }: any) {
         } as any);
       }
 
-      readerRef.current.decodeFromStream(stream, videoRef.current, (res, err) => {
+      readerRef.current.decodeFromStream(stream, videoRef.current, (res) => {
         if (res && !lock.current) {
           const code = res.getText().trim();
+
           lock.current = true;
           setProcessing(true);
 
@@ -107,8 +112,12 @@ export default function MobilStokScanner({ onResult, onClose }: any) {
     try {
       streamRef.current?.getTracks().forEach(t => t.stop());
       streamRef.current = null;
+
       readerRef.current?.reset?.();
-      if (videoRef.current) videoRef.current.srcObject = null;
+
+      if (videoRef.current) {
+        videoRef.current.srcObject = null;
+      }
     } catch {}
 
     setScanning(false);
@@ -125,7 +134,7 @@ export default function MobilStokScanner({ onResult, onClose }: any) {
       fontFamily: 'sans-serif',
       minHeight: '100vh'
     }}>
-      
+
       {/* ÜST BAŞLIK */}
       <div style={{
         display: 'flex',
@@ -145,7 +154,7 @@ export default function MobilStokScanner({ onResult, onClose }: any) {
         Sayım Ekranı
       </div>
 
-      {/* TARAYICI ALANI */}
+      {/* TARAYICI */}
       <div style={{
         position: 'relative',
         width: '92%',
@@ -163,7 +172,7 @@ export default function MobilStokScanner({ onResult, onClose }: any) {
           style={{ width: '100%', height: '100%', objectFit: 'cover' }}
         />
 
-        {/* Odak Çerçevesi */}
+        {/* Odak çerçevesi */}
         <div style={{ position: 'absolute', inset: '40px', pointerEvents: 'none' }}>
           <div style={{ position: 'absolute', top: 0, left: 0, width: '25px', height: '25px', borderTop: '4px solid white', borderLeft: '4px solid white' }} />
           <div style={{ position: 'absolute', top: 0, right: 0, width: '25px', height: '25px', borderTop: '4px solid white', borderRight: '4px solid white' }} />
@@ -171,10 +180,10 @@ export default function MobilStokScanner({ onResult, onClose }: any) {
           <div style={{ position: 'absolute', bottom: 0, right: 0, width: '25px', height: '25px', borderBottom: '4px solid white', borderRight: '4px solid white' }} />
         </div>
 
-        {/* Lazer çizgisi */}
+        {/* Lazer */}
         {scanning && !processing && <div className="laser" />}
 
-        {/* Processing overlay */}
+        {/* Processing */}
         {processing && (
           <div style={{
             position: 'absolute',
