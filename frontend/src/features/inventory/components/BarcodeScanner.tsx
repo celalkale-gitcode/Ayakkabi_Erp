@@ -27,6 +27,7 @@ export default function BarcodeScanner({ onResult, onClose }: Props) {
   const [processing, setProcessing] = useState(false);
   const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
   const [deviceId, setDeviceId] = useState('');
+  const [lastCode, setLastCode] = useState(''); // Modal'a göndermek için
   const [error, setError] = useState<string | null>(null);
   const [history, setHistory] = useState<ScannedItem[]>([]);
   const [manualModal, setManualModal] = useState(false);
@@ -81,6 +82,7 @@ export default function BarcodeScanner({ onResult, onClose }: Props) {
         if (!res || lock.current) return;
         const code = res.getText().trim();
         lock.current = true;
+        setLastCode(code); // Kodu kaydet
         setProcessing(true);
         navigator.vibrate?.(100);
         try {
@@ -99,8 +101,8 @@ export default function BarcodeScanner({ onResult, onClose }: Props) {
   };
 
   return (
-    <div className="w-full max-w-[420px] mx-auto rounded-[32px] overflow-hidden border border-slate-800 bg-slate-950 shadow-2xl">
-      <div className="h-16 px-5 flex items-center justify-between border-b border-white/10 bg-slate-900 text-white">
+    <div className="w-full max-w-[420px] mx-auto rounded-[32px] overflow-hidden border border-slate-800 bg-slate-950 shadow-2xl text-white">
+      <div className="h-16 px-5 flex items-center justify-between border-b border-white/10 bg-slate-900">
         <h2 className="font-black text-lg">MOBİL STOK</h2>
         {onClose && <button onClick={onClose} className="w-8 h-8 rounded-full bg-white/10">✕</button>}
       </div>
@@ -108,36 +110,32 @@ export default function BarcodeScanner({ onResult, onClose }: Props) {
       <div className="relative w-full h-[320px] bg-black">
         <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover" />
         <div className="absolute inset-0 z-10 pointer-events-none flex items-center justify-center">
-          <div className="w-[260px] h-[160px] border-2 border-green-400/50 rounded-2xl relative">
-            <div className="absolute inset-0 border-4 border-green-400 rounded-2xl" style={{ clipPath: 'polygon(0 0, 20% 0, 20% 10%, 10% 10%, 10% 20%, 0 20%, 0 0, 80% 0, 80% 10%, 90% 10%, 90% 20%, 100% 20%, 100% 0, 80% 0, 100% 80%, 90% 80%, 90% 90%, 80% 90%, 80% 100%, 100% 100%, 100% 80%, 20% 100%, 20% 90%, 10% 90%, 10% 80%, 0 80%, 0 100%, 20% 100%)' }} />
+          <div className="w-[260px] h-[160px] border-2 border-green-400/50 rounded-2xl">
+             <div className="absolute inset-0 border-4 border-green-400 rounded-2xl" style={{ clipPath: 'polygon(0 0, 20% 0, 0 0, 0 20%, 0 0, 20% 0, 100% 0, 80% 0, 100% 0, 100% 20%, 100% 0, 80% 0, 100% 100%, 80% 100%, 100% 100%, 100% 80%, 100% 100%, 80% 100%, 0 100%, 20% 100%, 0 100%, 0 80%, 0 100%, 20% 100%)' }} />
           </div>
         </div>
-        {processing && (
-          <div className="absolute inset-0 z-30 flex items-center justify-center bg-black/60 backdrop-blur-sm text-white font-bold">
-            İŞLENİYOR...
-          </div>
-        )}
+        {processing && <div className="absolute inset-0 z-30 flex items-center justify-center bg-black/60 backdrop-blur-sm font-bold">İŞLENİYOR...</div>}
       </div>
 
       <div className="p-5 space-y-4">
         <div className="flex gap-2">
-          <select value={deviceId} onChange={e => setDeviceId(e.target.value)} className="flex-1 bg-slate-800 text-white p-3 rounded-xl border border-white/10 outline-none text-sm">
+          <select value={deviceId} onChange={e => setDeviceId(e.target.value)} className="flex-1 bg-slate-800 p-3 rounded-xl border border-white/10 outline-none text-sm">
             {devices.map(d => <option key={d.deviceId} value={d.deviceId}>{d.label || 'Kamera'}</option>)}
           </select>
-          <button onClick={() => setManualModal(true)} className="px-4 bg-slate-800 text-white rounded-xl border border-white/10">⌨️</button>
+          <button onClick={() => setManualModal(true)} className="px-4 bg-slate-800 rounded-xl border border-white/10">⌨️</button>
         </div>
 
         <div className="max-h-[200px] overflow-y-auto">
-          {/* HATA BURADAYDI: TypeScript kontrolünü devre dışı bıraktık */}
           <ScanHistoryList {...({ history } as any)} />
         </div>
       </div>
 
       {manualModal && (
         <ManualProductModal 
+          barkod={lastCode} // EKSİK OLAN VE HATAYA SEBEP OLAN PROP BURADA
           onClose={() => setManualModal(false)}
           onSubmit={(data: any) => {
-            setHistory(prev => [{ sku: data.sku, yeniStok: data.stok, islemTarihi: 'Manuel' }, ...prev]);
+            setHistory(prev => [{ sku: data.sku || lastCode, yeniStok: data.stok, islemTarihi: 'Manuel' }, ...prev]);
             setManualModal(false);
           }}
         />
@@ -145,4 +143,3 @@ export default function BarcodeScanner({ onResult, onClose }: Props) {
     </div>
   );
 }
-
