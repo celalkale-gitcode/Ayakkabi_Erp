@@ -3,55 +3,93 @@ import {
 } from '../types/inventory.types';
 
 interface Props {
-  items: ScannedItem[];
+  items?: ScannedItem[];
 }
 
 export default function ScanHistoryList({
-  items,
+  items = [],
 }: Props) {
 
   return (
-    <div className="bg-white rounded-xl shadow-lg p-4">
+    <div className="bg-white rounded-2xl shadow-lg p-4">
 
-      <h2 className="font-semibold border-b pb-2 mb-3">
-        Son Sayımlar
+      <h2 className="font-bold text-slate-800 border-b pb-3 mb-3">
+        Son Tarananlar
       </h2>
 
       <div className="space-y-3 max-h-60 overflow-y-auto">
 
-        {items.map((item, idx) => (
+        {items.length > 0 ? (
 
-          <div
-            key={item.sku + idx}
-            className="flex justify-between items-center p-2 bg-slate-50 rounded border"
-          >
+          items.map((item, idx) => (
 
-            <div>
-              <p className="font-bold text-sm">
-                {item.sku}
-              </p>
+            <div
+              key={`${item.sku}-${idx}`}
+              className="
+                flex
+                items-center
+                justify-between
+                p-3
+                rounded-xl
+                border
+                bg-slate-50
+                hover:bg-slate-100
+                transition
+              "
+            >
 
-              <p className="text-xs text-gray-500">
-                {item.islemTarihi
-                  ? new Date(
-                      item.islemTarihi,
-                    ).toLocaleTimeString()
-                  : '-'}
-              </p>
+              <div className="flex flex-col">
+
+                <span className="font-bold text-sm text-slate-800">
+                  {item.sku}
+                </span>
+
+                <span className="text-xs text-slate-500 mt-1">
+                  {item.islemTarihi
+                    ? new Date(
+                        item.islemTarihi,
+                      ).toLocaleTimeString(
+                        'tr-TR',
+                      )
+                    : '-'}
+                </span>
+
+              </div>
+
+              <span
+                className="
+                  bg-green-100
+                  text-green-700
+                  px-3
+                  py-1
+                  rounded-full
+                  text-xs
+                  font-bold
+                  whitespace-nowrap
+                "
+              >
+                Stok: {item.yeniStok}
+              </span>
+
             </div>
 
-            <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-bold">
-              Stok: {item.yeniStok}
-            </span>
+          ))
 
-          </div>
-        ))}
+        ) : (
 
-        {items.length === 0 && (
-          <p className="text-center text-gray-400 text-sm py-4">
+          <div
+            className="
+              text-center
+              text-slate-400
+              text-sm
+              py-8
+            "
+          >
             Henüz barkod okutulmadı.
-          </p>
+          </div>
+
         )}
+
       </div>
     </div>
   );
