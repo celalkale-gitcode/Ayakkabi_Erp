@@ -3,7 +3,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { BrowserMultiFormatReader } from '@zxing/browser';
 
-// Alt bileşenlerin (mock/temsili) tanımları - Kendi dosyalarından import edebilirsin
+// Bileşenlerini mevcut dosya yoluna göre import ettiğinden emin ol
 import ScanHistoryList from './ScanHistoryList';
 import ManualProductModal from './ManualProductModal';
 
@@ -18,7 +18,7 @@ interface Props {
   onClose?: () => void;
 }
 
-export default function BarkodScanner({ onResult, onClose }: Props) {
+export default function BarcodeScanner({ onResult, onClose }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const readerRef = useRef<BrowserMultiFormatReader | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -32,7 +32,6 @@ export default function BarkodScanner({ onResult, onClose }: Props) {
   const [history, setHistory] = useState<ScannedItem[]>([]);
   const [manualModal, setManualModal] = useState(false);
 
-  // 1. Kameraları Listele
   useEffect(() => {
     readerRef.current = new BrowserMultiFormatReader();
 
@@ -51,9 +50,8 @@ export default function BarkodScanner({ onResult, onClose }: Props) {
     return () => stop();
   }, []);
 
-  // 2. Kamera Seçimi Değiştiğinde Başlat
   useEffect(() => {
-    if (deviceId) {
+    if (deviceId && !scanning) {
       start();
     }
   }, [deviceId]);
@@ -64,12 +62,17 @@ export default function BarkodScanner({ onResult, onClose }: Props) {
         streamRef.current.getTracks().forEach((t) => t.stop());
         streamRef.current = null;
       }
-      readerRef.current?.reset();
+      
+      // BUILD HATASINI ÇÖZEN KISIM:
+      if (readerRef.current) {
+        (readerRef.current as any).reset?.();
+      }
+
       if (videoRef.current) {
         videoRef.current.srcObject = null;
       }
     } catch (e) {
-      console.error(e);
+      console.error("Durdurma hatası:", e);
     } finally {
       setScanning(false);
       setProcessing(false);
@@ -81,7 +84,7 @@ export default function BarkodScanner({ onResult, onClose }: Props) {
       setError(null);
       if (!videoRef.current || !readerRef.current) return;
 
-      stop(); // Önceki yayını kapat
+      stop();
 
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
@@ -106,14 +109,10 @@ export default function BarkodScanner({ onResult, onClose }: Props) {
           lock.current = true;
           setProcessing(true);
           
-          // Geri bildirim
           if (navigator.vibrate) navigator.vibrate(100);
 
           try {
-            // API çağrısı veya dışarıdan gelen onResult fonksiyonu
             await onResult?.(code);
-
-            // Başarılı tarama sonrası listeye ekle
             setHistory((prev) => [
               {
                 sku: code,
@@ -126,7 +125,6 @@ export default function BarkodScanner({ onResult, onClose }: Props) {
             console.error('İşlem hatası:', err);
             setManualModal(true);
           } finally {
-            // 1.5 saniye bekleme (çift okumayı önlemek için)
             setTimeout(() => {
               setProcessing(false);
               lock.current = false;
@@ -136,7 +134,7 @@ export default function BarkodScanner({ onResult, onClose }: Props) {
       );
     } catch (e) {
       console.error(e);
-      setError('Kamera başlatılamadı. İzinleri kontrol edin.');
+      setError('Kamera başlatılamadı. Lütfen izinleri kontrol edin.');
       setScanning(false);
     }
   };
@@ -144,7 +142,6 @@ export default function BarkodScanner({ onResult, onClose }: Props) {
   return (
     <div className="w-full max-w-[420px] mx-auto rounded-[32px] overflow-hidden border border-slate-800 bg-slate-950 shadow-2xl">
       
-      {/* HEADER */}
       <div className="h-16 px-5 flex items-center justify-between border-b border-white/10 bg-slate-900">
         <div>
           <h2 className="text-white font-black text-lg uppercase tracking-tight">Mobil Stok</h2>
@@ -161,11 +158,9 @@ export default function BarkodScanner({ onResult, onClose }: Props) {
         )}
       </div>
 
-      {/* CAMERA AREA */}
-      <div className="relative w-full h-[340px] bg-black overflow-hidden group">
+      <div className="relative w-full h-[340px] bg-black overflow-hidden">
         <video ref={videoRef} autoPlay playsInline muted className="absolute inset-0 w-full h-full object-cover" />
 
-        {/* DARK MASK (SVG) */}
         <div className="absolute inset-0 z-10 pointer-events-none">
           <svg width="100%" height="100%">
             <defs>
@@ -178,21 +173,17 @@ export default function BarkodScanner({ onResult, onClose }: Props) {
           </svg>
         </div>
 
-        {/* SCANNING FRAME & ANIMATION */}
         <div className="absolute top-1/2 left-1/2 w-[260px] h-[160px] z-20 -translate-x-1/2 -translate-y-1/2">
-          {/* Köşe Çizgileri */}
           <div className="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-green-400 rounded-tl-2xl" />
           <div className="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-green-400 rounded-tr-2xl" />
           <div className="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-green-400 rounded-bl-2xl" />
           <div className="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-green-400 rounded-br-2xl" />
           
-          {/* Tarama Çizgisi */}
           {scanning && !processing && (
-            <div className="w-full h-[2px] bg-green-400/50 absolute top-0 animate-[scan_2s_linear_infinite] shadow-[0_0_15px_rgba(74,222,128,0.8)]" />
+            <div className="w-full h-[2px] bg-green-400/50 absolute top-0 animate-scan shadow-[0_0_15px_rgba(74,222,128,0.8)]" />
           )}
         </div>
 
-        {/* PROCESSING OVERLAY */}
         {processing && (
           <div className="absolute inset-0 z-30 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm">
             <div className="flex flex-col items-center bg-white px-6 py-4 rounded-3xl shadow-xl">
@@ -202,7 +193,6 @@ export default function BarkodScanner({ onResult, onClose }: Props) {
           </div>
         )}
 
-        {/* ERROR STATE */}
         {error && (
           <div className="absolute inset-0 z-40 flex items-center justify-center bg-red-950/90 p-6 text-center">
             <p className="text-white font-medium">{error}</p>
@@ -210,13 +200,12 @@ export default function BarkodScanner({ onResult, onClose }: Props) {
         )}
       </div>
 
-      {/* CONTROLS & HISTORY */}
       <div className="p-5 bg-slate-900/50 space-y-4">
         <div className="flex gap-3">
           <select 
             value={deviceId} 
             onChange={(e) => setDeviceId(e.target.value)}
-            className="flex-1 bg-slate-800 border border-white/10 text-white text-sm rounded-2xl px-4 h-12 outline-none focus:ring-2 focus:ring-blue-500 transition-all appearance-none"
+            className="flex-1 bg-slate-800 border border-white/10 text-white text-sm rounded-2xl px-4 h-12 outline-none appearance-none cursor-pointer"
           >
             {devices.map((device) => (
               <option key={device.deviceId} value={device.deviceId}>
@@ -233,35 +222,28 @@ export default function BarkodScanner({ onResult, onClose }: Props) {
           </button>
         </div>
 
-        {/* Geçmiş Listesi Bileşeni */}
-        <div className="max-h-[300px] overflow-y-auto custom-scrollbar">
+        <div className="max-h-[250px] overflow-y-auto pr-1">
           <ScanHistoryList history={history} />
         </div>
       </div>
 
-      {/* MODAL */}
       {manualModal && (
         <ManualProductModal 
           onClose={() => setManualModal(false)}
-          onSubmit={(data) => {
+          onSubmit={(data: any) => {
             setHistory(prev => [{ sku: data.sku, yeniStok: data.stok, islemTarihi: 'Manuel' }, ...prev]);
             setManualModal(false);
           }}
         />
       )}
 
-      {/* CSS Animasyon (Tailwind config'e eklemek yerine buraya ekleyebilirsin) */}
       <style jsx>{`
         @keyframes scan {
           0% { top: 0; }
           100% { top: 100%; }
         }
-        .custom-scrollbar::-webkit-scrollbar {
-          width: 4px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-          background: rgba(255,255,255,0.1);
-          border-radius: 10px;
+        .animate-scan {
+          animation: scan 2s linear infinite;
         }
       `}</style>
     </div>
