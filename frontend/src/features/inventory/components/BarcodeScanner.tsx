@@ -63,15 +63,16 @@ export default function BarcodeScanner({ onResult }: any) {
         }
       `}</style>
 
+      {/* ANA ÇERÇEVE: BLUR VE GÖLGE KALDIRILDI, KESKİNLEŞTİRİLDİ */}
       <div style={{ 
         position: 'relative', 
         width: '100%', 
         aspectRatio: '1.8', 
         background: '#000', 
-        borderRadius: '16px',
-        border: '1px solid rgba(255,255,255,0.1)',
+        borderRadius: '12px', // Hafif kavis korundu, istersen 0 yapıp tam kare yapabilirsin
+        border: '1px solid rgba(255,255,255,0.3)', // Çizgi biraz daha netleştirildi
         overflow: 'hidden',
-        boxShadow: '0 10px 30px rgba(0,0,0,0.5)'
+        boxShadow: 'none' // TÜM GÖLGE VE BLUR EFEKTİ KALDIRILDI
       }}>
         <video 
           ref={videoRef} 
@@ -79,13 +80,13 @@ export default function BarcodeScanner({ onResult }: any) {
           style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
         />
 
-        {/* TRANSPARAN KÖŞE ÇERÇEVELERİ */}
+        {/* KÖŞE ÇERÇEVELERİ */}
         <div style={{ position: 'absolute', top: '15px', left: '15px', width: '20px', height: '20px', borderTop: '3px solid rgba(255,255,255,0.4)', borderLeft: '3px solid rgba(255,255,255,0.4)', borderRadius: '4px 0 0 0' }} />
         <div style={{ position: 'absolute', top: '15px', right: '15px', width: '20px', height: '20px', borderTop: '3px solid rgba(255,255,255,0.4)', borderRight: '3px solid rgba(255,255,255,0.4)', borderRadius: '0 4px 0 0' }} />
         <div style={{ position: 'absolute', bottom: '15px', left: '15px', width: '20px', height: '20px', borderBottom: '3px solid rgba(255,255,255,0.4)', borderLeft: '3px solid rgba(255,255,255,0.4)', borderRadius: '0 0 0 4px' }} />
         <div style={{ position: 'absolute', bottom: '15px', right: '15px', width: '20px', height: '20px', borderBottom: '3px solid rgba(255,255,255,0.4)', borderRight: '3px solid rgba(255,255,255,0.4)', borderRadius: '0 0 4px 0' }} />
 
-        {/* HAREKETLİ LAZER */}
+        {/* LAZER */}
         {scanning && !processing && (
           <div style={{ 
             position: 'absolute', 
@@ -102,25 +103,25 @@ export default function BarcodeScanner({ onResult }: any) {
         {/* İŞLENİYOR EKRANI */}
         {processing && (
           <div style={{ 
-            position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)', 
+            position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.7)', // Biraz daha koyulaştırıldı
             display: 'flex', alignItems: 'center', justifyContent: 'center', 
-            backdropFilter: 'blur(4px)', zIndex: 20 
+            zIndex: 20 
           }}>
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
-              <span style={{ color: '#fff', fontSize: '13px', fontWeight: '500', letterSpacing: '2px' }}>İŞLENİYOR</span>
+              <span style={{ color: '#fff', fontSize: '13px', fontWeight: '600', letterSpacing: '2px' }}>İŞLENİYOR</span>
               <div style={{ width: '30px', height: '2px', background: '#ff0000' }}></div>
             </div>
           </div>
         )}
 
-        {/* KAMERA BUTONU (Çok az yukarı ve sağa taşındı) */}
+        {/* KAMERA BUTONU */}
         {!processing && (
           <button
             onClick={scanning ? stop : start}
             style={{
               position: 'absolute', 
-              top: '24px',    // 30px'den 24px'e çekildi (yukarı taşındı)
-              right: '24px',  // 30px'den 24px'e çekildi (sağa taşındı)
+              top: '24px', 
+              right: '24px', 
               width: '34px', 
               height: '34px', 
               borderRadius: '50%', 
