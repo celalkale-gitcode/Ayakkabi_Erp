@@ -113,14 +113,14 @@ export default function BarcodeScanner({ onResult }: any) {
           </div>
         )}
 
-        {/* KAMERA BUTONU (Eşit aralıklarla içeri çekildi) */}
+        {/* KAMERA BUTONU (Çok az yukarı ve sağa taşındı) */}
         {!processing && (
           <button
             onClick={scanning ? stop : start}
             style={{
               position: 'absolute', 
-              top: '30px',    // Üstten mesafe artırıldı
-              right: '30px',  // Sağdan mesafe artırıldı (Eşitlendi)
+              top: '24px',    // 30px'den 24px'e çekildi (yukarı taşındı)
+              right: '24px',  // 30px'den 24px'e çekildi (sağa taşındı)
               width: '34px', 
               height: '34px', 
               borderRadius: '50%', 
