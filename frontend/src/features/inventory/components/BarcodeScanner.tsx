@@ -4,13 +4,11 @@ import React, { useEffect, useRef, useState } from 'react';
 
 export default function BarcodeScanner({ onResult }: any) {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const readerRef = useRef<any>(null); // Kütüphaneyi burada saklayacağız
+  const readerRef = useRef<any>(null);
   const [scanning, setScanning] = useState(false);
   const [processing, setProcessing] = useState(false);
 
   useEffect(() => {
-    // KÜTÜPHANEYİ NASIL KULLANMALIYIZ?
-    // Doğrudan 'import' yerine 'dynamic import' kullanarak build hatasını engelliyoruz.
     const loadScanner = async () => {
       const { BrowserMultiFormatReader } = await import('@zxing/library');
       readerRef.current = new BrowserMultiFormatReader();
@@ -28,9 +26,8 @@ export default function BarcodeScanner({ onResult }: any) {
       setScanning(true);
       setProcessing(false);
 
-      // Kamerayı başlat ve oku
       await readerRef.current.decodeFromVideoDevice(
-        undefined, // Varsayılan arka kamerayı seçer
+        undefined,
         videoRef.current,
         (result: any) => {
           if (result && !processing) {
@@ -53,6 +50,15 @@ export default function BarcodeScanner({ onResult }: any) {
 
   return (
     <div style={{ width: '100%', maxWidth: '400px', margin: '0 auto' }}>
+      {/* Animasyon için Style Tag ekliyoruz */}
+      <style>{`
+        @keyframes scanMove {
+          0% { top: 20%; }
+          50% { top: 80%; }
+          100% { top: 20%; }
+        }
+      `}</style>
+
       <div style={{ 
         position: 'relative', 
         width: '100%', 
@@ -65,17 +71,23 @@ export default function BarcodeScanner({ onResult }: any) {
         {/* KAMERA ALANI */}
         <video ref={videoRef} playsInline style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
 
-        {/* PRO ÇERÇEVE (Kenarlardan 1mm içeride) */}
-        <div style={{ position: 'absolute', top: '2px', left: '2px', width: '25px', height: '25px', borderTop: '4px solid #fff', borderLeft: '4px solid #fff' }} />
-        <div style={{ position: 'absolute', top: '2px', right: '2px', width: '25px', height: '25px', borderTop: '4px solid #fff', borderRight: '4px solid #fff' }} />
-        <div style={{ position: 'absolute', bottom: '2px', left: '2px', width: '25px', height: '25px', borderBottom: '4px solid #fff', borderLeft: '4px solid #fff' }} />
-        <div style={{ position: 'absolute', bottom: '2px', right: '2px', width: '25px', height: '25px', borderBottom: '4px solid #fff', borderRight: '4px solid #fff' }} />
+        {/* PRO ÇERÇEVE */}
+        <div style={{ position: 'absolute', top: '2px', left: '2px', width: '25px', height: '25px', borderTop: '4px solid #fff', borderLeft: '4px solid #fff', borderRadius: '4px 0 0 0' }} />
+        <div style={{ position: 'absolute', top: '2px', right: '2px', width: '25px', height: '25px', borderTop: '4px solid #fff', borderRight: '4px solid #fff', borderRadius: '0 4px 0 0' }} />
+        <div style={{ position: 'absolute', bottom: '2px', left: '2px', width: '25px', height: '25px', borderBottom: '4px solid #fff', borderLeft: '4px solid #fff', borderRadius: '0 0 0 4px' }} />
+        <div style={{ position: 'absolute', bottom: '2px', right: '2px', width: '25px', height: '25px', borderBottom: '4px solid #fff', borderRight: '4px solid #fff', borderRadius: '0 0 4px 0' }} />
 
-        {/* BLUR LAZER ÇİZGİSİ */}
+        {/* HAREKETLİ LAZER ÇİZGİSİ (Resimdeki efektle birebir) */}
         {scanning && !processing && (
           <div style={{ 
-            position: 'absolute', top: '50%', left: '12%', right: '12%', height: '2px', 
-            background: 'rgba(255, 0, 0, 0.4)', boxShadow: '0 0 10px 2px red' 
+            position: 'absolute', 
+            left: '8%', 
+            right: '8%', 
+            height: '3px', 
+            background: '#ff4d4d', 
+            boxShadow: '0 0 15px 3px #ff0000, 0 0 5px 1px #ffffff80',
+            zIndex: 10,
+            animation: 'scanMove 2.5s ease-in-out infinite' // Yukarı-aşağı hareket
           }} />
         )}
 
@@ -83,20 +95,20 @@ export default function BarcodeScanner({ onResult }: any) {
         {processing && (
           <div style={{ 
             position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.4)', 
-            display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(2px)' 
+            display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(2px)', zIndex: 20 
           }}>
-            <span style={{ color: '#fff', fontSize: '14px', letterSpacing: '1px' }}>İŞLENİYOR...</span>
+            <span style={{ color: '#fff', fontSize: '14px', fontWeight: '600', letterSpacing: '1px' }}>İŞLENİYOR...</span>
           </div>
         )}
 
-        {/* 4 NOLU ALAN: BEYAZ ŞEFFAF DAİRE + SİYAH KAMERA İKONU */}
+        {/* KAMERA AÇMA/KAPAMA BUTONU */}
         {!processing && (
           <button
             onClick={scanning ? stop : start}
             style={{
               position: 'absolute', top: '15px', right: '15px', width: '38px', height: '38px', 
-              borderRadius: '50%', background: 'rgba(255, 255, 255, 0.7)', border: 'none', 
-              display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer'
+              borderRadius: '50%', background: 'rgba(255, 255, 255, 0.8)', border: 'none', 
+              display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', zIndex: 30
             }}
           >
             <svg width="22" height="22" viewBox="0 0 24 24" fill="black">
