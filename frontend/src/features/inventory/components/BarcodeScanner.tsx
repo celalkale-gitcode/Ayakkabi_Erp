@@ -9,7 +9,6 @@ export default function BarcodeScanner({ onResult }: any) {
   const [processing, setProcessing] = useState(false);
 
   useEffect(() => {
-    // ZXing Kütüphanesini dinamik olarak yükle
     const loadScanner = async () => {
       try {
         const { BrowserMultiFormatReader } = await import('@zxing/library');
@@ -56,7 +55,6 @@ export default function BarcodeScanner({ onResult }: any) {
 
   return (
     <div style={{ width: '100%', maxWidth: '400px', margin: '0 auto' }}>
-      {/* Lazerin yukarı-aşağı hareketi için CSS animasyonu */}
       <style>{`
         @keyframes scanMove {
           0% { top: 15%; }
@@ -75,7 +73,6 @@ export default function BarcodeScanner({ onResult }: any) {
         overflow: 'hidden',
         boxShadow: '0 10px 30px rgba(0,0,0,0.5)'
       }}>
-        {/* KAMERA GÖRÜNTÜSÜ */}
         <video 
           ref={videoRef} 
           playsInline 
@@ -88,7 +85,7 @@ export default function BarcodeScanner({ onResult }: any) {
         <div style={{ position: 'absolute', bottom: '10px', left: '10px', width: '20px', height: '20px', borderBottom: '3px solid #fff', borderLeft: '3px solid #fff', borderRadius: '0 0 0 4px' }} />
         <div style={{ position: 'absolute', bottom: '10px', right: '10px', width: '20px', height: '20px', borderBottom: '3px solid #fff', borderRight: '3px solid #fff', borderRadius: '0 0 4px 0' }} />
 
-        {/* İNCELTİLMİŞ VE TRANSPARAN HAREKETLİ LAZER */}
+        {/* HAREKETLİ LAZER */}
         {scanning && !processing && (
           <div style={{ 
             position: 'absolute', 
@@ -116,7 +113,7 @@ export default function BarcodeScanner({ onResult }: any) {
           </div>
         )}
 
-        {/* KAMERA BUTONU (Daha Transparan ve Küçük) */}
+        {/* DİNAMİK KAMERA BUTONU */}
         {!processing && (
           <button
             onClick={scanning ? stop : start}
@@ -127,19 +124,20 @@ export default function BarcodeScanner({ onResult }: any) {
               width: '36px', 
               height: '36px', 
               borderRadius: '50%', 
-              // Transparanlık artırıldı (0.75 -> 0.5)
-              background: 'rgba(255, 255, 255, 0.5)', 
+              // Kamera açıkken kırmızı, kapalıyken beyaz transparan
+              background: scanning ? 'rgba(255, 0, 0, 0.6)' : 'rgba(255, 255, 255, 0.5)', 
               border: 'none', 
               display: 'flex', 
               alignItems: 'center', 
               justifyContent: 'center', 
               cursor: 'pointer', 
               zIndex: 30, 
-              transition: 'all 0.2s',
-              backdropFilter: 'blur(4px)' // Butonun arkasını hafif bulanık yaparak şıklık katar
+              transition: 'all 0.3s ease', // Renk geçişi yumuşatıldı
+              backdropFilter: 'blur(4px)',
+              boxShadow: scanning ? '0 0 15px rgba(255, 0, 0, 0.4)' : 'none'
             }}
           >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="rgba(0, 0, 0, 0.7)">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill={scanning ? '#fff' : 'rgba(0, 0, 0, 0.7)'}>
               <path d="M9 2L7.17 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2h-3.17L15 2H9zm3 15c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5z"/>
             </svg>
           </button>
