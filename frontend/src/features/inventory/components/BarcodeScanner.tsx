@@ -57,41 +57,40 @@ export default function BarcodeScanner({ onResult }: any) {
     <div style={{ width: '100%', maxWidth: '400px', margin: '0 auto' }}>
       <style>{`
         @keyframes scanMove {
-          0% { top: 15%; }
-          50% { top: 85%; }
-          100% { top: 15%; }
+          0% { top: 20%; }
+          50% { top: 80%; }
+          100% { top: 20%; }
         }
       `}</style>
 
       <div style={{ 
         position: 'relative', 
         width: '100%', 
-        aspectRatio: '1.4', 
+        aspectRatio: '1.8', // Resimdeki kırmızı çizgilerin yüksekliğine uygun olarak daraltıldı
         background: '#000', 
         borderRadius: '16px',
         border: '1px solid rgba(255,255,255,0.1)',
         overflow: 'hidden',
         boxShadow: '0 10px 30px rgba(0,0,0,0.5)'
       }}>
-        {/* KAMERA GÖRÜNTÜSÜ */}
         <video 
           ref={videoRef} 
           playsInline 
           style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
         />
 
-        {/* TRANSPARAN KÖŞE ÇERÇEVELERİ (L ŞEKLİ KORUNDU) */}
-        <div style={{ position: 'absolute', top: '10px', left: '10px', width: '20px', height: '20px', borderTop: '3px solid rgba(255,255,255,0.4)', borderLeft: '3px solid rgba(255,255,255,0.4)', borderRadius: '4px 0 0 0' }} />
-        <div style={{ position: 'absolute', top: '10px', right: '10px', width: '20px', height: '20px', borderTop: '3px solid rgba(255,255,255,0.4)', borderRight: '3px solid rgba(255,255,255,0.4)', borderRadius: '0 4px 0 0' }} />
-        <div style={{ position: 'absolute', bottom: '10px', left: '10px', width: '20px', height: '20px', borderBottom: '3px solid rgba(255,255,255,0.4)', borderLeft: '3px solid rgba(255,255,255,0.4)', borderRadius: '0 0 0 4px' }} />
-        <div style={{ position: 'absolute', bottom: '10px', right: '10px', width: '20px', height: '20px', borderBottom: '3px solid rgba(255,255,255,0.4)', borderRight: '3px solid rgba(255,255,255,0.4)', borderRadius: '0 0 4px 0' }} />
+        {/* TRANSPARAN KÖŞE ÇERÇEVELERİ (Yeni boyuta göre konumlandırıldı) */}
+        <div style={{ position: 'absolute', top: '15px', left: '15px', width: '20px', height: '20px', borderTop: '3px solid rgba(255,255,255,0.4)', borderLeft: '3px solid rgba(255,255,255,0.4)', borderRadius: '4px 0 0 0' }} />
+        <div style={{ position: 'absolute', top: '15px', right: '15px', width: '20px', height: '20px', borderTop: '3px solid rgba(255,255,255,0.4)', borderRight: '3px solid rgba(255,255,255,0.4)', borderRadius: '0 4px 0 0' }} />
+        <div style={{ position: 'absolute', bottom: '15px', left: '15px', width: '20px', height: '20px', borderBottom: '3px solid rgba(255,255,255,0.4)', borderLeft: '3px solid rgba(255,255,255,0.4)', borderRadius: '0 0 0 4px' }} />
+        <div style={{ position: 'absolute', bottom: '15px', right: '15px', width: '20px', height: '20px', borderBottom: '3px solid rgba(255,255,255,0.4)', borderRight: '3px solid rgba(255,255,255,0.4)', borderRadius: '0 0 4px 0' }} />
 
-        {/* HAREKETLİ LAZER */}
+        {/* HAREKETLİ LAZER (Yeni yükseklik oranına göre normalize edildi) */}
         {scanning && !processing && (
           <div style={{ 
             position: 'absolute', 
-            left: '10%', 
-            right: '10%', 
+            left: '12%', 
+            right: '12%', 
             height: '1.5px',
             background: 'rgba(255, 0, 0, 0.4)',
             boxShadow: '0 0 10px 1px rgba(255, 0, 0, 0.4), 0 0 4px 0px rgba(255, 255, 255, 0.2)',
@@ -107,23 +106,23 @@ export default function BarcodeScanner({ onResult }: any) {
             display: 'flex', alignItems: 'center', justifyContent: 'center', 
             backdropFilter: 'blur(4px)', zIndex: 20 
           }}>
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
-              <span style={{ color: '#fff', fontSize: '14px', fontWeight: '500', letterSpacing: '2px' }}>İŞLENİYOR</span>
-              <div style={{ width: '40px', height: '2px', background: '#ff0000' }}></div>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+              <span style={{ color: '#fff', fontSize: '13px', fontWeight: '500', letterSpacing: '2px' }}>İŞLENİYOR</span>
+              <div style={{ width: '30px', height: '2px', background: '#ff0000' }}></div>
             </div>
           </div>
         )}
 
-        {/* KESKİN VE DİNAMİK KAMERA BUTONU */}
+        {/* KESKİN VE DİNAMİK KAMERA BUTONU (Yeni konuma göre ortalandı) */}
         {!processing && (
           <button
             onClick={scanning ? stop : start}
             style={{
               position: 'absolute', 
               top: '20px', 
-              right: '20px', 
-              width: '36px', 
-              height: '36px', 
+              right: '25px', 
+              width: '34px', 
+              height: '34px', 
               borderRadius: '50%', 
               background: scanning ? 'rgba(255, 0, 0, 0.5)' : 'rgba(255, 255, 255, 0.5)', 
               border: 'none', 
@@ -138,7 +137,7 @@ export default function BarcodeScanner({ onResult }: any) {
               outline: 'none'
             }}
           >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill={scanning ? '#fff' : 'rgba(0, 0, 0, 0.7)'}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill={scanning ? '#fff' : 'rgba(0, 0, 0, 0.7)'}>
               <path d="M9 2L7.17 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2h-3.17L15 2H9zm3 15c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5z"/>
             </svg>
           </button>
