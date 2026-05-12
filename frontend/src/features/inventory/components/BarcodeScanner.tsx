@@ -66,7 +66,7 @@ export default function BarcodeScanner({ onResult }: any) {
       <div style={{ 
         position: 'relative', 
         width: '100%', 
-        aspectRatio: '1.8', // Resimdeki kırmızı çizgilerin yüksekliğine uygun olarak daraltıldı
+        aspectRatio: '1.8', 
         background: '#000', 
         borderRadius: '16px',
         border: '1px solid rgba(255,255,255,0.1)',
@@ -79,13 +79,13 @@ export default function BarcodeScanner({ onResult }: any) {
           style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
         />
 
-        {/* TRANSPARAN KÖŞE ÇERÇEVELERİ (Yeni boyuta göre konumlandırıldı) */}
+        {/* TRANSPARAN KÖŞE ÇERÇEVELERİ */}
         <div style={{ position: 'absolute', top: '15px', left: '15px', width: '20px', height: '20px', borderTop: '3px solid rgba(255,255,255,0.4)', borderLeft: '3px solid rgba(255,255,255,0.4)', borderRadius: '4px 0 0 0' }} />
         <div style={{ position: 'absolute', top: '15px', right: '15px', width: '20px', height: '20px', borderTop: '3px solid rgba(255,255,255,0.4)', borderRight: '3px solid rgba(255,255,255,0.4)', borderRadius: '0 4px 0 0' }} />
         <div style={{ position: 'absolute', bottom: '15px', left: '15px', width: '20px', height: '20px', borderBottom: '3px solid rgba(255,255,255,0.4)', borderLeft: '3px solid rgba(255,255,255,0.4)', borderRadius: '0 0 0 4px' }} />
         <div style={{ position: 'absolute', bottom: '15px', right: '15px', width: '20px', height: '20px', borderBottom: '3px solid rgba(255,255,255,0.4)', borderRight: '3px solid rgba(255,255,255,0.4)', borderRadius: '0 0 4px 0' }} />
 
-        {/* HAREKETLİ LAZER (Yeni yükseklik oranına göre normalize edildi) */}
+        {/* HAREKETLİ LAZER */}
         {scanning && !processing && (
           <div style={{ 
             position: 'absolute', 
@@ -113,14 +113,14 @@ export default function BarcodeScanner({ onResult }: any) {
           </div>
         )}
 
-        {/* KESKİN VE DİNAMİK KAMERA BUTONU (Yeni konuma göre ortalandı) */}
+        {/* KAMERA BUTONU (Eşit aralıklarla içeri çekildi) */}
         {!processing && (
           <button
             onClick={scanning ? stop : start}
             style={{
               position: 'absolute', 
-              top: '20px', 
-              right: '25px', 
+              top: '30px',    // Üstten mesafe artırıldı
+              right: '30px',  // Sağdan mesafe artırıldı (Eşitlendi)
               width: '34px', 
               height: '34px', 
               borderRadius: '50%', 
