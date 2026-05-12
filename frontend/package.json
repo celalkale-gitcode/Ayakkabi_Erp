@@ -18,7 +18,6 @@
     "clsx": "^2.1.0",
     "tailwind-merge": "^2.2.1",
     "@zxing/browser": "^0.1.5",
-    "@zxing/library": "^0.21.0",
     "react-hot-toast": "^2.4.1",
     "framer-motion": "^11.0.0"
   },
