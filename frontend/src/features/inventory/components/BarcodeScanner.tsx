@@ -8,41 +8,31 @@ export default function BarkodScanner({ onResult, onClose }: any) {
   const readerRef = useRef<BrowserMultiFormatReader | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const [scanning, setScanning] = useState(false);
-  const [processing, setProcessing] = useState(false);
   const [deviceId, setDeviceId] = useState('');
-  const lock = useRef(false);
 
   useEffect(() => {
     readerRef.current = new BrowserMultiFormatReader();
-    BrowserMultiFormatReader.listVideoInputDevices()
-      .then((d) => {
-        const backCam = d.find(device => 
-          device.label.toLowerCase().includes('back') || 
-          device.label.toLowerCase().includes('arka')
-        );
-        setDeviceId(backCam?.deviceId || d[0]?.deviceId || '');
-      });
+    BrowserMultiFormatReader.listVideoInputDevices().then((d) => {
+      const back = d.find(i => i.label.toLowerCase().includes('back') || i.label.toLowerCase().includes('arka'));
+      setDeviceId(back?.deviceId || d[0]?.deviceId || '');
+    });
     return () => stop();
   }, []);
 
   const start = async () => {
     try {
-      if (!videoRef.current || !readerRef.current) return;
       setScanning(true);
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { deviceId: deviceId ? { exact: deviceId } : undefined, facingMode: 'environment' }
       });
       streamRef.current = stream;
-      videoRef.current.srcObject = stream;
+      if (videoRef.current) videoRef.current.srcObject = stream;
       
-      readerRef.current.decodeFromStream(stream, videoRef.current, (res) => {
-        if (!res || lock.current) return;
-        const code = res.getText().trim();
-        lock.current = true;
-        setProcessing(true);
-        if (navigator.vibrate) navigator.vibrate(100);
-        onResult(code);
-        setTimeout(() => { setProcessing(false); lock.current = false; }, 2000);
+      readerRef.current?.decodeFromStream(stream, videoRef.current!, (res) => {
+        if (res) {
+          if (navigator.vibrate) navigator.vibrate(100);
+          onResult(res.getText().trim());
+        }
       });
     } catch (e) { setScanning(false); }
   };
@@ -54,12 +44,19 @@ export default function BarkodScanner({ onResult, onClose }: any) {
   };
 
   return (
-    <div style={{ width: '100%', maxWidth: '400px', margin: '0 auto', background: '#111', borderRadius: '16px', overflow: 'hidden', padding: '10px' }}>
+    <div style={{ width: '100%', maxWidth: '380px', margin: '0 auto', background: '#000', padding: '15px' }}>
       
-      {/* 1 NOLU ALAN: KAMERA VE ÇERÇEVE TAM UYUMLU */}
-      <div style={{ position: 'relative', width: '100%', aspectRatio: '1.4', background: '#000', borderRadius: '12px', border: '1px solid #333', overflow: 'hidden' }}>
+      {/* 1 NOLU ALAN: KAMERA VE ÇERÇEVE BİRLEŞİK */}
+      <div style={{ 
+        position: 'relative', 
+        width: '100%', 
+        height: '220px', // Resimdeki gibi yatay dikdörtgen form
+        border: '2px solid rgba(255,255,255,0.3)', 
+        borderRadius: '12px',
+        overflow: 'hidden'
+      }}>
         
-        {/* VIDEO (Sadece çerçevenin içinde) */}
+        {/* KAMERA GÖRÜNTÜSÜ */}
         <video 
           ref={videoRef} 
           autoPlay 
@@ -68,55 +65,45 @@ export default function BarkodScanner({ onResult, onClose }: any) {
           style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
         />
 
-        {/* BARKOD ÇERÇEVESİ OVERLAY */}
-        <div style={{ position: 'absolute', inset: '0', pointerEvents: 'none' }}>
-          {/* KÖŞE ÇİZGİLERİ (BEYAZ) */}
-          <div style={{ position: 'absolute', top: '10px', left: '10px', width: '30px', height: '30px', borderTop: '4px solid #fff', borderLeft: '4px solid #fff' }} />
-          <div style={{ position: 'absolute', top: '10px', right: '10px', width: '30px', height: '30px', borderTop: '4px solid #fff', borderRight: '4px solid #fff' }} />
-          <div style={{ position: 'absolute', bottom: '10px', left: '10px', width: '30px', height: '30px', borderBottom: '4px solid #fff', borderLeft: '4px solid #fff' }} />
-          <div style={{ position: 'absolute', bottom: '10px', right: '10px', width: '30px', height: '30px', borderBottom: '4px solid #fff', borderRight: '4px solid #fff' }} />
+        {/* BARKOD KÖŞELERİ */}
+        <div style={{ position: 'absolute', top: 0, left: 0, width: '20px', height: '20px', borderTop: '4px solid #fff', borderLeft: '4px solid #fff' }} />
+        <div style={{ position: 'absolute', top: 0, right: 0, width: '20px', height: '20px', borderTop: '4px solid #fff', borderRight: '4px solid #fff' }} />
+        <div style={{ position: 'absolute', bottom: 0, left: 0, width: '20px', height: '20px', borderBottom: '4px solid #fff', borderLeft: '4px solid #fff' }} />
+        <div style={{ position: 'absolute', bottom: 0, right: 0, width: '20px', height: '20px', borderBottom: '4px solid #fff', borderRight: '4px solid #fff' }} />
 
-          {/* KIRMIZI LAZER (RESİMDEKİ GİBİ TAM ORTADA) */}
-          {scanning && (
-            <div style={{ position: 'absolute', top: '50%', left: '10%', right: '10%', height: '2px', background: 'red', boxShadow: '0 0 10px red', opacity: 0.8 }} />
-          )}
-        </div>
+        {/* KIRMIZI LAZER ÇİZGİSİ */}
+        {scanning && (
+          <div style={{ position: 'absolute', top: '50%', left: '5%', right: '5%', height: '2px', background: 'red', boxShadow: '0 0 8px red' }} />
+        )}
 
-        {/* 4 NOLU ALAN: RESİMDEKİ İKONUN AYNISI (TRANSPARAN BEYAZ DAİRE + SİYAH İKON) */}
+        {/* 4 NOLU ALAN: ŞEFFAF BEYAZ DAİRE + SİYAH KAMERA İKONU */}
         <button
           onClick={scanning ? stop : start}
           style={{
             position: 'absolute',
-            top: '20px',
-            right: '20px',
-            width: '40px',
-            height: '40px',
+            top: '12px',
+            right: '12px',
+            width: '36px',
+            height: '36px',
             borderRadius: '50%',
-            background: 'rgba(255, 255, 255, 0.8)', // Hafif transparan beyaz
+            background: 'rgba(255, 255, 255, 0.7)', // Şeffaf beyaz
             border: 'none',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             cursor: 'pointer',
-            zIndex: 10,
-            boxShadow: '0 2px 8px rgba(0,0,0,0.4)'
+            zIndex: 10
           }}
         >
-          {/* FOTOĞRAF MAKİNESİ İKONU (SİYAH) */}
-          <span className="material-icons" style={{ color: '#000', fontSize: '22px' }}>
-            photo_camera
-          </span>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="black">
+            <path d="M9 2L7.17 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2h-3.17L15 2H9zm3 15c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5z"/>
+          </svg>
         </button>
-
-        {/* PROCESSING */}
-        {processing && (
-          <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '14px', zIndex: 20 }}>
-            OKUNUYOR...
-          </div>
-        )}
       </div>
 
-      <link href="https://googleapis.com" rel="stylesheet" />
+      <style>{`
+        body { background-color: #000; }
+      `}</style>
     </div>
   );
 }
