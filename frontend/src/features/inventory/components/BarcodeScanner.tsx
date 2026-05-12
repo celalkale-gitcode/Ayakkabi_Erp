@@ -113,7 +113,7 @@ export default function BarcodeScanner({ onResult }: any) {
           </div>
         )}
 
-        {/* DİNAMİK KAMERA BUTONU */}
+        {/* KESKİN VE DİNAMİK KAMERA BUTONU */}
         {!processing && (
           <button
             onClick={scanning ? stop : start}
@@ -124,17 +124,18 @@ export default function BarcodeScanner({ onResult }: any) {
               width: '36px', 
               height: '36px', 
               borderRadius: '50%', 
-              // Kamera açıkken kırmızı, kapalıyken beyaz transparan
-              background: scanning ? 'rgba(255, 0, 0, 0.6)' : 'rgba(255, 255, 255, 0.5)', 
+              // Şeffaflık korundu, renkler dinamik
+              background: scanning ? 'rgba(255, 0, 0, 0.5)' : 'rgba(255, 255, 255, 0.5)', 
               border: 'none', 
               display: 'flex', 
               alignItems: 'center', 
               justifyContent: 'center', 
               cursor: 'pointer', 
               zIndex: 30, 
-              transition: 'all 0.3s ease', // Renk geçişi yumuşatıldı
-              backdropFilter: 'blur(4px)',
-              boxShadow: scanning ? '0 0 15px rgba(255, 0, 0, 0.4)' : 'none'
+              transition: 'background 0.3s ease', 
+              backdropFilter: 'blur(4px)', // Arka plan buzlu cam efekti
+              boxShadow: 'none', // Dışarı doğru olan tüm parlamalar kaldırıldı (Keskin kenar)
+              outline: 'none'
             }}
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill={scanning ? '#fff' : 'rgba(0, 0, 0, 0.7)'}>
