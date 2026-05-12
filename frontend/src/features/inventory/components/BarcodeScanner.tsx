@@ -114,30 +114,31 @@ export default function BarcodeScanner({ onResult }: any) {
           </div>
         )}
 
-        {/* KAMERA BUTONU */}
+  {/* KAMERA BUTONU */}
         {!processing && (
-          <button
-            onClick={scanning ? stop : start}
-            style={{
-              position: 'absolute', 
-              top: '24px', 
-              right: '24px', 
-              width: '34px', 
-              height: '34px', 
-              borderRadius: '50%', 
-              background: scanning ? 'rgba(255, 0, 0, 0.5)' : 'rgba(255, 255, 255, 0.5)', 
-              border: 'none', 
-              display: 'flex', 
-              alignItems: 'center', 
-              justifyContent: 'center', 
-              cursor: 'pointer', 
-              zIndex: 30, 
-              transition: 'background 0.3s ease', 
-              backdropFilter: 'blur(4px)', 
-              boxShadow: 'none',
-              outline: 'none'
-            }}
-          >
+           <button
+  onClick={scanning ? stop : start}
+  style={{
+    // Mevcut kodlarınız...
+    position: 'absolute',
+    top: '24px',
+    right: '24px',
+    width: '34px',
+    height: '34px',
+    borderRadius: '50%',
+    
+    // ÇÖZÜM İÇİN BURASI KRİTİK:
+    outline: '0',
+    outlineOffset: '0',
+    WebkitTapHighlightColor: 'transparent',
+    WebkitAppearance: 'none',
+    boxShadow: 'none',
+    
+    // Bazı tarayıcılar için "touch" olayını optimize edin
+    touchAction: 'manipulation' 
+  }}
+>
+
             <svg width="16" height="16" viewBox="0 0 24 24" fill={scanning ? '#fff' : 'rgba(0, 0, 0, 0.7)'}>
               <path d="M9 2L7.17 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2h-3.17L15 2H9zm3 15c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5z"/>
             </svg>
