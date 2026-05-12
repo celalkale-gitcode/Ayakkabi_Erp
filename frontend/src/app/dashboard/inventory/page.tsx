@@ -13,31 +13,23 @@ export default function InventoryPage() {
   const [history, setHistory] = useState<ScannedItem[]>([]);
   const [showManualModal, setShowManualModal] = useState(false);
 
-  // 🔥 EN ÖNEMLİ EK: duplicate engelleme
   const [lastScanned, setLastScanned] = useState<string | null>(null);
 
   const handleBarcode = async (code: string) => {
     setBarcode(code);
 
-    // 🔥 aynı barkod spam olmasın
     if (lastScanned === code) return;
 
     setLastScanned(code);
 
-    // MOCK API RESPONSE
     const newItem: ScannedItem = {
       sku: code,
       yeniStok: Math.floor(Math.random() * 100),
       islemTarihi: new Date().toISOString(),
     };
 
-    // EN ÜSTE EKLE
     setHistory((prev) => [newItem, ...prev]);
 
-    // opsiyonel: ürün bulunamazsa
-    // setShowManualModal(true);
-
-    // 🔥 2 sn sonra reset (tekrar okutabilsin)
     setTimeout(() => {
       setLastScanned(null);
     }, 2000);
@@ -52,9 +44,6 @@ export default function InventoryPage() {
           <h1 className="text-2xl font-black text-slate-900">
             Mobil Stok Sayım
           </h1>
-          <p className="text-sm text-slate-500 mt-1">
-            Barkod ile ürün sayımı
-          </p>
         </div>
       </div>
 
