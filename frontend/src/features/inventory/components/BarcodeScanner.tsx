@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
-import { BrowserMultiFormatReader, DecodeHintType, BarcodeFormat } from '@zxing/library';
+// Sadece browser paketini kullanıyoruz, çakışmayı önlemek için library'i siliyoruz
+import { BrowserMultiFormatReader, DecodeHintType, BarcodeFormat } from '@zxing/browser';
 
 export default function BarkodScanner({ onResult }: any) {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -9,61 +10,57 @@ export default function BarkodScanner({ onResult }: any) {
   const [scanning, setScanning] = useState(false);
   const [processing, setProcessing] = useState(false);
   const [deviceId, setDeviceId] = useState('');
+  const controlsRef = useRef<any>(null);
 
   useEffect(() => {
+    // Odaklanma ve hız ayarları
     const hints = new Map();
-    const formats = [BarcodeFormat.EAN_13, BarcodeFormat.CODE_128, BarcodeFormat.EAN_8];
-    hints.set(DecodeHintType.POSSIBLE_FORMATS, formats);
-    hints.set(DecodeHintType.TRY_HARDER, true);
-    
+    hints.set(DecodeHintType.POSSIBLE_FORMATS, [
+      BarcodeFormat.EAN_13, 
+      BarcodeFormat.CODE_128, 
+      BarcodeFormat.EAN_8
+    ]);
+
     readerRef.current = new BrowserMultiFormatReader(hints);
 
-    // Build hatasını çözen güvenli cihaz listeleme yöntemi
-    navigator.mediaDevices.enumerateDevices().then((devices) => {
-      const videoDevices = devices.filter(device => device.kind === 'videoinput');
-      const back = videoDevices.find(d => d.label.toLowerCase().includes('back') || d.label.toLowerCase().includes('arka'));
-      setDeviceId(back?.deviceId || videoDevices[0]?.deviceId || '');
-    }).catch(err => console.error("Kamera erişim hatası:", err));
+    // Cihaz listeleme
+    BrowserMultiFormatReader.listVideoInputDevices().then((devices) => {
+      const back = devices.find(d => d.label.toLowerCase().includes('back') || d.label.toLowerCase().includes('arka'));
+      setDeviceId(back?.deviceId || devices[0]?.deviceId || '');
+    });
 
     return () => stop();
   }, []);
 
   const start = async () => {
-    if (!deviceId || !videoRef.current) return;
+    if (!deviceId || !videoRef.current || !readerRef.current) return;
     try {
       setScanning(true);
       setProcessing(false);
-      
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { 
-          deviceId: { exact: deviceId },
-          facingMode: 'environment',
-          width: { ideal: 1280 },
-          height: { ideal: 720 }
-        }
-      });
-      
-      videoRef.current.srcObject = stream;
 
-      readerRef.current?.decodeFromVideoElement(videoRef.current, (result) => {
-        if (result && !processing) {
-          setProcessing(true);
-          if (navigator.vibrate) navigator.vibrate(100);
-          onResult(result.getText());
-          setTimeout(() => setProcessing(false), 2000);
+      // Render hatasını çözen doğru metod: decodeFromVideoDevice
+      const controls = await readerRef.current.decodeFromVideoDevice(
+        deviceId,
+        videoRef.current,
+        (result) => {
+          if (result && !processing) {
+            setProcessing(true);
+            if (navigator.vibrate) navigator.vibrate(100);
+            onResult(result.getText());
+            setTimeout(() => setProcessing(false), 2000);
+          }
         }
-      });
+      );
+      controlsRef.current = controls;
     } catch (e) {
       setScanning(false);
     }
   };
 
   const stop = () => {
-    readerRef.current?.reset();
-    if (videoRef.current?.srcObject) {
-      const stream = videoRef.current.srcObject as MediaStream;
-      stream.getTracks().forEach(track => track.stop());
-      videoRef.current.srcObject = null;
+    if (controlsRef.current) {
+      controlsRef.current.stop();
+      controlsRef.current = null;
     }
     setScanning(false);
     setProcessing(false);
@@ -80,10 +77,9 @@ export default function BarkodScanner({ onResult }: any) {
         border: '1px solid rgba(255,255,255,0.1)',
         overflow: 'hidden'
       }}>
-        
         <video ref={videoRef} playsInline style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
 
-        {/* PRO KÖŞE ÇİZGİLERİ (1mm içeride) */}
+        {/* PRO KÖŞE ÇİZGİLERİ (1mm İçeride) */}
         <div style={{ position: 'absolute', top: '2px', left: '2px', width: '25px', height: '25px', borderTop: '4px solid #fff', borderLeft: '4px solid #fff' }} />
         <div style={{ position: 'absolute', top: '2px', right: '2px', width: '25px', height: '25px', borderTop: '4px solid #fff', borderRight: '4px solid #fff' }} />
         <div style={{ position: 'absolute', bottom: '2px', left: '2px', width: '25px', height: '25px', borderBottom: '4px solid #fff', borderLeft: '4px solid #fff' }} />
@@ -108,7 +104,7 @@ export default function BarkodScanner({ onResult }: any) {
           <div style={{ 
             position: 'absolute', 
             inset: 0, 
-            background: 'rgba(0,0,0,0.5)', 
+            background: 'rgba(0,0,0,0.45)', 
             display: 'flex', 
             alignItems: 'center', 
             justifyContent: 'center',
@@ -119,7 +115,7 @@ export default function BarkodScanner({ onResult }: any) {
           </div>
         )}
 
-        {/* BEYAZ TRANSPARAN BUTON + SİYAH İKON */}
+        {/* BEYAZ ŞEFFAF BUTON + SİYAH İKON */}
         {!processing && (
           <button
             onClick={scanning ? stop : start}
@@ -130,7 +126,7 @@ export default function BarkodScanner({ onResult }: any) {
               width: '38px',
               height: '38px',
               borderRadius: '50%',
-              background: 'rgba(255, 255, 255, 0.7)',
+              background: 'rgba(255, 255, 255, 0.65)',
               border: 'none',
               display: 'flex',
               alignItems: 'center',
