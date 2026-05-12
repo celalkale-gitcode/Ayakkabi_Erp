@@ -1,38 +1,89 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
-import { BrowserMultiFormatReader } from '@zxing/browser';
+import React, {
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
 
-export default function BarkodScanner({ onResult, onClose }: any) {
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const readerRef = useRef<BrowserMultiFormatReader | null>(null);
-  const streamRef = useRef<MediaStream | null>(null);
+import {
+  BrowserMultiFormatReader,
+} from '@zxing/browser';
 
-  const [scanning, setScanning] = useState(false);
-  const [processing, setProcessing] = useState(false);
-  const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
-  const [deviceId, setDeviceId] = useState('');
-  const [lastCode, setLastCode] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+export default function BarkodScanner({
+  onResult,
+  onClose,
+}: any) {
+
+  const videoRef =
+    useRef<HTMLVideoElement>(null);
+
+  const readerRef =
+    useRef<BrowserMultiFormatReader | null>(null);
+
+  const streamRef =
+    useRef<MediaStream | null>(null);
+
+  const [scanning, setScanning] =
+    useState(false);
+
+  const [processing, setProcessing] =
+    useState(false);
+
+  const [devices, setDevices] =
+    useState<MediaDeviceInfo[]>([]);
+
+  const [deviceIndex, setDeviceIndex] =
+    useState(0);
+
+  const [deviceId, setDeviceId] =
+    useState('');
+
+  const [lastCode, setLastCode] =
+    useState<string | null>(null);
+
+  const [error, setError] =
+    useState<string | null>(null);
 
   const lock = useRef(false);
 
   useEffect(() => {
-    readerRef.current = new BrowserMultiFormatReader();
+    readerRef.current =
+      new BrowserMultiFormatReader();
 
-    BrowserMultiFormatReader.listVideoInputDevices()
+    BrowserMultiFormatReader
+      .listVideoInputDevices()
       .then((d) => {
+
         setDevices(d);
 
-        const backCam = d.find(
-          (device) =>
-            device.label.toLowerCase().includes('back') ||
-            device.label.toLowerCase().includes('arka')
-        );
+        const backCamIndex =
+          d.findIndex(
+            (device) =>
+              device.label
+                .toLowerCase()
+                .includes('back') ||
+              device.label
+                .toLowerCase()
+                .includes('arka')
+          );
 
-        setDeviceId(backCam ? backCam.deviceId : d[0]?.deviceId || '');
+        const selectedIndex =
+          backCamIndex >= 0
+            ? backCamIndex
+            : 0;
+
+        setDeviceIndex(selectedIndex);
+
+        setDeviceId(
+          d[selectedIndex]?.deviceId || ''
+        );
       })
-      .catch(() => setError('Kamera listesi alınamadı'));
+      .catch(() =>
+        setError(
+          'Kamera listesi alınamadı'
+        )
+      );
 
     return () => stop();
   }, []);
@@ -43,30 +94,68 @@ export default function BarkodScanner({ onResult, onClose }: any) {
     }
   }, [deviceId]);
 
+  const switchCamera = () => {
+
+    if (devices.length <= 1) return;
+
+    const nextIndex =
+      (deviceIndex + 1) %
+      devices.length;
+
+    setDeviceIndex(nextIndex);
+
+    setDeviceId(
+      devices[nextIndex].deviceId
+    );
+  };
+
   const start = async () => {
+
     try {
+
       setError(null);
 
-      if (!videoRef.current || !readerRef.current) return;
+      if (
+        !videoRef.current ||
+        !readerRef.current
+      ) {
+        return;
+      }
 
       if (streamRef.current) {
-        streamRef.current.getTracks().forEach((t) => t.stop());
+        streamRef.current
+          .getTracks()
+          .forEach((t) => t.stop());
       }
 
       setScanning(true);
 
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          deviceId: deviceId ? { exact: deviceId } : undefined,
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
-          facingMode: 'environment',
-        },
-      });
+      const stream =
+        await navigator.mediaDevices.getUserMedia(
+          {
+            video: {
+              deviceId: deviceId
+                ? { exact: deviceId }
+                : undefined,
+
+              width: {
+                ideal: 1280,
+              },
+
+              height: {
+                ideal: 720,
+              },
+
+              facingMode:
+                'environment',
+            },
+          }
+        );
 
       streamRef.current = stream;
 
-      videoRef.current.srcObject = stream;
+      videoRef.current.srcObject =
+        stream;
 
       await videoRef.current.play();
 
@@ -74,9 +163,18 @@ export default function BarkodScanner({ onResult, onClose }: any) {
         stream,
         videoRef.current,
         (res) => {
-          if (!res || lock.current) return;
 
-          const code = res.getText().trim();
+          if (
+            !res ||
+            lock.current
+          ) {
+            return;
+          }
+
+          const code =
+            res
+              .getText()
+              .trim();
 
           lock.current = true;
 
@@ -96,29 +194,44 @@ export default function BarkodScanner({ onResult, onClose }: any) {
           }, 2000);
         }
       );
+
     } catch (e) {
-      setError('Kamera başlatılamadı');
+
+      setError(
+        'Kamera başlatılamadı'
+      );
+
       setScanning(false);
     }
   };
 
   const stop = () => {
+
     try {
-      streamRef.current?.getTracks().forEach((t) => t.stop());
+
+      streamRef.current
+        ?.getTracks()
+        .forEach((t) => t.stop());
 
       streamRef.current = null;
 
       if (readerRef.current) {
-        (readerRef.current as any).reset?.();
+        (
+          readerRef.current as any
+        ).reset?.();
       }
 
       if (videoRef.current) {
-        videoRef.current.srcObject = null;
+        videoRef.current.srcObject =
+          null;
       }
+
     } catch {}
 
     setScanning(false);
+
     setProcessing(false);
+
     setLastCode(null);
   };
 
@@ -132,21 +245,26 @@ export default function BarkodScanner({ onResult, onClose }: any) {
         borderRadius: '24px',
         overflow: 'hidden',
         border: '1px solid #334155',
-        boxShadow: '0 10px 30px rgba(0,0,0,0.35)',
+        boxShadow:
+          '0 10px 30px rgba(0,0,0,0.35)',
       }}
     >
+
       {/* BAŞLIK */}
       <div
         style={{
           height: '52px',
           padding: '0 18px',
           display: 'flex',
-          justifyContent: 'space-between',
+          justifyContent:
+            'space-between',
           alignItems: 'center',
-          borderBottom: '1px solid #1e293b',
+          borderBottom:
+            '1px solid #1e293b',
           background: '#0f172a',
         }}
       >
+
         <span
           style={{
             fontWeight: 800,
@@ -157,25 +275,57 @@ export default function BarkodScanner({ onResult, onClose }: any) {
           Barkod Tarayıcı
         </span>
 
-        {onClose && (
+        <div
+          style={{
+            display: 'flex',
+            gap: '10px',
+            alignItems: 'center',
+          }}
+        >
+
+          {/* KAMERA DEĞİŞTİR */}
           <button
-            onClick={onClose}
+            onClick={switchCamera}
             style={{
+              width: '34px',
+              height: '34px',
+              borderRadius: '50%',
               border: 'none',
               background: '#1e293b',
-              color: '#cbd5e1',
-              width: '30px',
-              height: '30px',
-              borderRadius: '50%',
+              color: '#fff',
               cursor: 'pointer',
+              fontSize: '18px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
             }}
           >
-            ✕
+            🔄
           </button>
-        )}
+
+          {/* KAPAT */}
+          {onClose && (
+            <button
+              onClick={onClose}
+              style={{
+                border: 'none',
+                background:
+                  '#1e293b',
+                color: '#cbd5e1',
+                width: '30px',
+                height: '30px',
+                borderRadius:
+                  '50%',
+                cursor: 'pointer',
+              }}
+            >
+              ✕
+            </button>
+          )}
+        </div>
       </div>
 
-      {/* KAMERA ALANI */}
+      {/* KAMERA */}
       <div
         style={{
           position: 'relative',
@@ -185,6 +335,7 @@ export default function BarkodScanner({ onResult, onClose }: any) {
           overflow: 'hidden',
         }}
       >
+
         <video
           ref={videoRef}
           autoPlay
@@ -210,9 +361,13 @@ export default function BarkodScanner({ onResult, onClose }: any) {
             pointerEvents: 'none',
           }}
         >
-          <svg width="100%" height="100%">
+          <svg
+            width="100%"
+            height="100%"
+          >
             <defs>
               <mask id="m">
+
                 <rect
                   width="100%"
                   height="100%"
@@ -226,15 +381,20 @@ export default function BarkodScanner({ onResult, onClose }: any) {
                   height="120"
                   rx="20"
                   fill="black"
-                  transform="translate(-110, -60)"
+                  transform="
+                    translate(-110, -60)
+                  "
                 />
+
               </mask>
             </defs>
 
             <rect
               width="100%"
               height="100%"
-              fill="rgba(0,0,0,0.6)"
+              fill="
+                rgba(0,0,0,0.6)
+              "
               mask="url(#m)"
             />
           </svg>
@@ -250,9 +410,11 @@ export default function BarkodScanner({ onResult, onClose }: any) {
             height: '120px',
             zIndex: 10,
             pointerEvents: 'none',
-            transform: 'translate(-110px, -60px)',
+            transform:
+              'translate(-110px, -60px)',
           }}
         >
+
           <div
             style={{
               position: 'absolute',
@@ -260,9 +422,12 @@ export default function BarkodScanner({ onResult, onClose }: any) {
               left: 0,
               width: '26px',
               height: '26px',
-              borderTop: '5px solid white',
-              borderLeft: '5px solid white',
-              borderTopLeftRadius: '12px',
+              borderTop:
+                '5px solid white',
+              borderLeft:
+                '5px solid white',
+              borderTopLeftRadius:
+                '12px',
             }}
           />
 
@@ -273,9 +438,12 @@ export default function BarkodScanner({ onResult, onClose }: any) {
               right: 0,
               width: '26px',
               height: '26px',
-              borderTop: '5px solid white',
-              borderRight: '5px solid white',
-              borderTopRightRadius: '12px',
+              borderTop:
+                '5px solid white',
+              borderRight:
+                '5px solid white',
+              borderTopRightRadius:
+                '12px',
             }}
           />
 
@@ -286,9 +454,12 @@ export default function BarkodScanner({ onResult, onClose }: any) {
               left: 0,
               width: '26px',
               height: '26px',
-              borderBottom: '5px solid white',
-              borderLeft: '5px solid white',
-              borderBottomLeftRadius: '12px',
+              borderBottom:
+                '5px solid white',
+              borderLeft:
+                '5px solid white',
+              borderBottomLeftRadius:
+                '12px',
             }}
           />
 
@@ -299,9 +470,12 @@ export default function BarkodScanner({ onResult, onClose }: any) {
               right: 0,
               width: '26px',
               height: '26px',
-              borderBottom: '5px solid white',
-              borderRight: '5px solid white',
-              borderBottomRightRadius: '12px',
+              borderBottom:
+                '5px solid white',
+              borderRight:
+                '5px solid white',
+              borderBottomRightRadius:
+                '12px',
             }}
           />
 
@@ -309,12 +483,15 @@ export default function BarkodScanner({ onResult, onClose }: any) {
             <div
               className="scanner-line"
               style={{
-                position: 'absolute',
+                position:
+                  'absolute',
                 left: '10px',
                 right: '10px',
                 height: '2px',
-                background: '#ff0000',
-                boxShadow: '0 0 12px #ff0000',
+                background:
+                  '#ff0000',
+                boxShadow:
+                  '0 0 12px #ff0000',
               }}
             />
           )}
@@ -330,26 +507,32 @@ export default function BarkodScanner({ onResult, onClose }: any) {
               width: '100%',
               height: '100%',
               zIndex: 100,
-              backgroundColor: 'rgba(15, 23, 42, 0.88)',
+              backgroundColor:
+                'rgba(15,23,42,0.88)',
               display: 'flex',
-              flexDirection: 'column',
+              flexDirection:
+                'column',
               alignItems: 'center',
-              justifyContent: 'center',
+              justifyContent:
+                'center',
               color: '#fff',
             }}
           >
+
             <div className="spinner"></div>
 
             <p
               style={{
                 marginTop: '16px',
                 fontWeight: 800,
-                letterSpacing: '2px',
+                letterSpacing:
+                  '2px',
                 fontSize: '14px',
               }}
             >
               İŞLENİYOR...
             </p>
+
           </div>
         )}
       </div>
@@ -361,6 +544,7 @@ export default function BarkodScanner({ onResult, onClose }: any) {
           background: '#111827',
         }}
       >
+
         {/* BARKOD */}
         <div
           style={{
@@ -368,14 +552,18 @@ export default function BarkodScanner({ onResult, onClose }: any) {
             marginBottom: '14px',
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'center',
-            background: lastCode ? '#0f172a' : 'transparent',
+            justifyContent:
+              'center',
+            background: lastCode
+              ? '#0f172a'
+              : 'transparent',
             borderRadius: '10px',
             border: lastCode
               ? '1px solid #334155'
               : 'none',
           }}
         >
+
           {lastCode && (
             <span
               style={{
@@ -385,6 +573,7 @@ export default function BarkodScanner({ onResult, onClose }: any) {
               }}
             >
               Barkod:
+
               <span
                 style={{
                   color: '#38bdf8',
@@ -397,50 +586,13 @@ export default function BarkodScanner({ onResult, onClose }: any) {
           )}
         </div>
 
-        {/* KAMERA SEÇ */}
-        <select
-          style={{
-            width: '100%',
-            height: '44px',
-            padding: '0 12px',
-            borderRadius: '10px',
-            border: '1px solid #334155',
-            marginBottom: '12px',
-            outline: 'none',
-            fontSize: '13px',
-            fontWeight: 600,
-            background: '#0f172a',
-            color: '#fff',
-          }}
-          value={deviceId}
-          onChange={(e) => setDeviceId(e.target.value)}
-        >
-          {devices.map((d, index) => {
-            const label = d.label.toLowerCase();
-
-            return (
-              <option
-                key={d.deviceId}
-                value={d.deviceId}
-              >
-                {label.includes('front') ||
-                label.includes('user') ||
-                label.includes('ön')
-                  ? '📱 Ön Kamera'
-                  : label.includes('back') ||
-                    label.includes('rear') ||
-                    label.includes('environment') ||
-                    label.includes('arka')
-                  ? '📷 Arka Kamera'
-                  : `📷 Kamera ${index + 1}`}
-              </option>
-            );
-          })}
-        </select>
-
-        {/* BUTON */}
+        {/* BAŞLAT / DURDUR */}
         <button
-          onClick={scanning ? stop : start}
+          onClick={
+            scanning
+              ? stop
+              : start
+          }
           style={{
             width: '100%',
             height: '48px',
@@ -476,6 +628,7 @@ export default function BarkodScanner({ onResult, onClose }: any) {
 
       <style jsx global>{`
         @keyframes scanMove {
+
           0% {
             top: 12%;
           }
@@ -490,25 +643,40 @@ export default function BarkodScanner({ onResult, onClose }: any) {
         }
 
         .scanner-line {
-          animation: scanMove 2s linear infinite;
+          animation:
+            scanMove 2s linear infinite;
         }
 
         .spinner {
           width: 42px;
           height: 42px;
-          border: 4px solid rgba(255,255,255,0.2);
-          border-top: 4px solid #fff;
+          border:
+            4px solid rgba(
+              255,
+              255,
+              255,
+              0.2
+            );
+
+          border-top:
+            4px solid #fff;
+
           border-radius: 50%;
-          animation: spin 1s linear infinite;
+
+          animation:
+            spin 1s linear infinite;
         }
 
         @keyframes spin {
+
           0% {
-            transform: rotate(0deg);
+            transform:
+              rotate(0deg);
           }
 
           100% {
-            transform: rotate(360deg);
+            transform:
+              rotate(360deg);
           }
         }
       `}</style>
