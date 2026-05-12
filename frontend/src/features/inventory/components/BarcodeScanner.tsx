@@ -9,18 +9,20 @@ export default function BarcodeScanner({ onResult }: any) {
   const [scanning, setScanning] = useState(false);
   const [processing, setProcessing] = useState(false);
   
-  // Hata payını düşürmek için doğrulama değişkenleri
+  // Hata payını düşürmek için kararlılık kontrolü
   const lastCode = useRef<string>("");
-  const confirmationCounter = useRef<number>(0);
+  const isLocked = useRef<boolean>(false);
 
   useEffect(() => {
     const loadScanner = async () => {
       try {
         const { BrowserMultiFormatReader, DecodeHintType, BarcodeFormat } = await import('@zxing/library');
         const hints = new Map();
-        // Sadece ürün barkodlarına odaklan ve derin taramayı (TryHarder) aktif tut
+        
+        // Hata payını düşüren en kritik ayarlar
         hints.set(DecodeHintType.POSSIBLE_FORMATS, [BarcodeFormat.EAN_13, BarcodeFormat.EAN_8, BarcodeFormat.CODE_128]);
-        hints.set(DecodeHintType.TRY_HARDER, true);
+        hints.set(DecodeHintType.TRY_HARDER, true); // Derin analiz
+        hints.set(DecodeHintType.ASSUME_GS1, true);
 
         readerRef.current = new BrowserMultiFormatReader(hints);
       } catch (err) {
@@ -36,8 +38,7 @@ export default function BarcodeScanner({ onResult }: any) {
     try {
       setScanning(true);
       setProcessing(false);
-      lastCode.current = "";
-      confirmationCounter.current = 0;
+      isLocked.current = false;
 
       const constraints = {
         video: { 
@@ -51,35 +52,28 @@ export default function BarcodeScanner({ onResult }: any) {
         constraints,
         videoRef.current,
         (result: any) => {
-          if (result && !processing) {
+          if (result && !isLocked.current) {
             const code = result.getText();
 
-            // DOĞRULAMA MANTIĞI:
-            // Okunan kod bir öncekiyle aynıysa sayacı artır
-            if (code === lastCode.current) {
-              confirmationCounter.current++;
-            } else {
-              // Farklıysa kodu kaydet ve sayacı 1 yap
-              lastCode.current = code;
-              confirmationCounter.current = 1;
-            }
-
-            // Arka arkaya 2 kez aynı kodu yakalarsa (Hız ve Doğruluk dengesi)
-            if (confirmationCounter.current >= 2) {
+            // Sadece geçerli uzunluktaki barkodları ciddiye al (Hatalı kısa okumaları eler)
+            if (code.length >= 8) {
+              isLocked.current = true; // İlk bulguda kilitle
+              
               setProcessing(true);
               if (navigator.vibrate) navigator.vibrate(100);
               
-              // Kamerayı anında durdur ki "işleniyor" ekranı donmasın
+              // Tarayıcıyı hemen durdur (Hızı ve "İşleniyor" ekranını kurtarır)
               if (readerRef.current) readerRef.current.reset();
               setScanning(false);
 
+              // Sonucu gönder
               onResult(code);
               
+              // 2.5 saniye bekleme süresi
               setTimeout(() => {
                 setProcessing(false);
-                lastCode.current = "";
-                confirmationCounter.current = 0;
-              }, 2000);
+                isLocked.current = false;
+              }, 2500);
             }
           }
         }
@@ -93,8 +87,7 @@ export default function BarcodeScanner({ onResult }: any) {
   const stop = () => {
     if (readerRef.current) readerRef.current.reset();
     setScanning(false);
-    lastCode.current = "";
-    confirmationCounter.current = 0;
+    isLocked.current = false;
   };
 
   return (
