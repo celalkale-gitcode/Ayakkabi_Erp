@@ -53,6 +53,16 @@ export default function BarcodeScanner({ onResult }: any) {
     setScanning(false);
   };
 
+  // Köşe çizgileri için ortak stil (Transparan Beyaz)
+  const cornerStyle: React.CSSProperties = {
+    position: 'absolute',
+    width: '20px',
+    height: '20px',
+    borderColor: 'rgba(255, 255, 255, 0.4)', // %40 transparan beyaz
+    borderStyle: 'solid',
+    pointerEvents: 'none'
+  };
+
   return (
     <div style={{ width: '100%', maxWidth: '400px', margin: '0 auto' }}>
       <style>{`
@@ -79,11 +89,11 @@ export default function BarcodeScanner({ onResult }: any) {
           style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
         />
 
-        {/* KÖŞE ÇERÇEVELERİ */}
-        <div style={{ position: 'absolute', top: '10px', left: '10px', width: '20px', height: '20px', borderTop: '3px solid #fff', borderLeft: '3px solid #fff', borderRadius: '4px 0 0 0' }} />
-        <div style={{ position: 'absolute', top: '10px', right: '10px', width: '20px', height: '20px', borderTop: '3px solid #fff', borderRight: '3px solid #fff', borderRadius: '0 4px 0 0' }} />
-        <div style={{ position: 'absolute', bottom: '10px', left: '10px', width: '20px', height: '20px', borderBottom: '3px solid #fff', borderLeft: '3px solid #fff', borderRadius: '0 0 0 4px' }} />
-        <div style={{ position: 'absolute', bottom: '10px', right: '10px', width: '20px', height: '20px', borderBottom: '3px solid #fff', borderRight: '3px solid #fff', borderRadius: '0 0 4px 0' }} />
+        {/* TRANSPARAN KÖŞE ÇERÇEVELERİ */}
+        <div style={{ ...cornerStyle, top: '12px', left: '12px', borderTopWidth: '3px', borderLeftWidth: '3px', borderRadius: '4px 0 0 0' }} />
+        <div style={{ ...cornerStyle, top: '12px', right: '12px', borderTopWidth: '3px', borderRightWidth: '3px', borderRadius: '0 4px 0 0' }} />
+        <div style={{ ...cornerStyle, bottom: '12px', left: '12px', borderBottomWidth: '3px', borderLeftWidth: '3px', borderRadius: '0 0 0 4px' }} />
+        <div style={{ ...cornerStyle, bottom: '12px', right: '12px', borderBottomWidth: '3px', borderRightWidth: '3px', borderRadius: '0 0 4px 0' }} />
 
         {/* HAREKETLİ LAZER */}
         {scanning && !processing && (
@@ -124,7 +134,6 @@ export default function BarcodeScanner({ onResult }: any) {
               width: '36px', 
               height: '36px', 
               borderRadius: '50%', 
-              // Şeffaflık korundu, renkler dinamik
               background: scanning ? 'rgba(255, 0, 0, 0.5)' : 'rgba(255, 255, 255, 0.5)', 
               border: 'none', 
               display: 'flex', 
@@ -133,8 +142,8 @@ export default function BarcodeScanner({ onResult }: any) {
               cursor: 'pointer', 
               zIndex: 30, 
               transition: 'background 0.3s ease', 
-              backdropFilter: 'blur(4px)', // Arka plan buzlu cam efekti
-              boxShadow: 'none', // Dışarı doğru olan tüm parlamalar kaldırıldı (Keskin kenar)
+              backdropFilter: 'blur(4px)', 
+              boxShadow: 'none',
               outline: 'none'
             }}
           >
