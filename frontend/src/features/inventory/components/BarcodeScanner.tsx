@@ -9,7 +9,6 @@ export default function BarcodeScanner({ onResult }: any) {
   const [processing, setProcessing] = useState(false);
 
   useEffect(() => {
-    // ZXing Kütüphanesini dinamik olarak yükle (Build hatalarını önlemek için)
     const loadScanner = async () => {
       try {
         const { BrowserMultiFormatReader } = await import('@zxing/library');
@@ -32,14 +31,13 @@ export default function BarcodeScanner({ onResult }: any) {
       setProcessing(false);
 
       await readerRef.current.decodeFromVideoDevice(
-        undefined, // Varsayılan arka kamera
+        undefined,
         videoRef.current,
         (result: any) => {
           if (result && !processing) {
             setProcessing(true);
             if (navigator.vibrate) navigator.vibrate(100);
             onResult(result.getText());
-            // Okuma sonrası 2 saniye bekleme (Çoklu okumayı önlemek için)
             setTimeout(() => setProcessing(false), 2000);
           }
         }
@@ -57,7 +55,6 @@ export default function BarcodeScanner({ onResult }: any) {
 
   return (
     <div style={{ width: '100%', maxWidth: '400px', margin: '0 auto' }}>
-      {/* Lazerin yukarı-aşağı hareketi için CSS animasyonu */}
       <style>{`
         @keyframes scanMove {
           0% { top: 15%; }
@@ -76,34 +73,33 @@ export default function BarcodeScanner({ onResult }: any) {
         overflow: 'hidden',
         boxShadow: '0 10px 30px rgba(0,0,0,0.5)'
       }}>
-        {/* KAMERA GÖRÜNTÜSÜ */}
         <video 
           ref={videoRef} 
           playsInline 
           style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
         />
 
-        {/* KÖŞE ÇERÇEVELERİ (PRO GÖRÜNÜM) */}
+        {/* KÖŞE ÇERÇEVELERİ */}
         <div style={{ position: 'absolute', top: '10px', left: '10px', width: '20px', height: '20px', borderTop: '3px solid #fff', borderLeft: '3px solid #fff', borderRadius: '4px 0 0 0' }} />
         <div style={{ position: 'absolute', top: '10px', right: '10px', width: '20px', height: '20px', borderTop: '3px solid #fff', borderRight: '3px solid #fff', borderRadius: '0 4px 0 0' }} />
         <div style={{ position: 'absolute', bottom: '10px', left: '10px', width: '20px', height: '20px', borderBottom: '3px solid #fff', borderLeft: '3px solid #fff', borderRadius: '0 0 0 4px' }} />
         <div style={{ position: 'absolute', bottom: '10px', right: '10px', width: '20px', height: '20px', borderBottom: '3px solid #fff', borderRight: '3px solid #fff', borderRadius: '0 0 4px 0' }} />
 
-        {/* İNCELTİLMİŞ VE TRANSPARAN HAREKETLİ LAZER */}
+        {/* HAREKETLİ LAZER */}
         {scanning && !processing && (
           <div style={{ 
             position: 'absolute', 
             left: '10%', 
             right: '10%', 
-            height: '1.5px', // Yarı yarıya inceltildi
-            background: 'rgba(255, 0, 0, 0.4)', // Transparan kırmızı
-            boxShadow: '0 0 10px 1px rgba(255, 0, 0, 0.4), 0 0 4px 0px rgba(255, 255, 255, 0.2)', // Yumuşak parlama
+            height: '1.5px',
+            background: 'rgba(255, 0, 0, 0.4)',
+            boxShadow: '0 0 10px 1px rgba(255, 0, 0, 0.4), 0 0 4px 0px rgba(255, 255, 255, 0.2)',
             zIndex: 10,
-            animation: 'scanMove 3s ease-in-out infinite' // Yukarı-aşağı akıcı hareket
+            animation: 'scanMove 3s ease-in-out infinite'
           }} />
         )}
 
-        {/* İŞLENİYOR EKRANI (BLUR EFEKTLİ) */}
+        {/* İŞLENİYOR EKRANI */}
         {processing && (
           <div style={{ 
             position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)', 
@@ -117,18 +113,28 @@ export default function BarcodeScanner({ onResult }: any) {
           </div>
         )}
 
-        {/* KAMERA BUTONU */}
+        {/* KAMERA BUTONU (Küçültüldü ve Kenarlardan Uzaklaştırıldı) */}
         {!processing && (
           <button
             onClick={scanning ? stop : start}
             style={{
-              position: 'absolute', top: '15px', right: '15px', width: '40px', height: '40px', 
-              borderRadius: '50%', background: 'rgba(255, 255, 255, 0.7)', border: 'none', 
-              display: 'flex', alignItems: 'center', justifyContent: 'center', 
-              cursor: 'pointer', zIndex: 30, transition: 'all 0.2s'
+              position: 'absolute', 
+              top: '20px', // Aşağı kaydırıldı (15px -> 20px)
+              right: '20px', // Sola kaydırıldı (15px -> 20px)
+              width: '36px', // Hafif küçültüldü (40px -> 36px)
+              height: '36px', 
+              borderRadius: '50%', 
+              background: 'rgba(255, 255, 255, 0.75)', 
+              border: 'none', 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center', 
+              cursor: 'pointer', 
+              zIndex: 30, 
+              transition: 'all 0.2s'
             }}
           >
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="black">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="black"> {/* İkon küçültüldü (24 -> 18) */}
               <path d="M9 2L7.17 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2h-3.17L15 2H9zm3 15c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5z"/>
             </svg>
           </button>
