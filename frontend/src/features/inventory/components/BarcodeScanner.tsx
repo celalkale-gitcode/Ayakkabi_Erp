@@ -12,14 +12,12 @@ export default function BarcodeScanner({ onResult }: any) {
   useEffect(() => {
     const loadScanner = async () => {
       try {
-        // ZXing'den gerekli sabitleri import ediyoruz
         const { BrowserMultiFormatReader, DecodeHintType, BarcodeFormat } = await import('@zxing/library');
         
-        // 1 & 2. MADDELER: SADECE EAN VE AGRESİF TARAMA (TRY_HARDER)
         const hints = new Map();
         const formats = [BarcodeFormat.EAN_13, BarcodeFormat.EAN_8, BarcodeFormat.CODE_128];
         hints.set(DecodeHintType.POSSIBLE_FORMATS, formats);
-        hints.set(DecodeHintType.TRY_HARDER, true); // Yanlış okumayı önlemek için derin analiz
+        hints.set(DecodeHintType.TRY_HARDER, true); 
 
         readerRef.current = new BrowserMultiFormatReader(hints);
       } catch (err) {
@@ -39,13 +37,12 @@ export default function BarcodeScanner({ onResult }: any) {
       setScanning(true);
       setProcessing(false);
 
-      // 4. MADDE: HD ÇÖZÜNÜRLÜK ZORLAMASI (Daha net görüntü = daha doğru okuma)
       const constraints = {
         video: {
           facingMode: "environment",
           width: { ideal: 1280 },
           height: { ideal: 720 },
-          focusMode: "continuous" // Destekleyen cihazlarda sürekli odaklama
+          focusMode: "continuous"
         }
       };
 
@@ -53,16 +50,27 @@ export default function BarcodeScanner({ onResult }: any) {
         constraints,
         videoRef.current,
         (result: any) => {
+          // Sonuç varsa ve halihazırda bir işlem yapılmıyorsa içeri gir
           if (result && !processing) {
             const text = result.getText();
 
-            // 5. MADDE: YAZILIMSAL DOĞRULAMA (EAN-13 ise 13 hane kontrolü)
-            // Barkodun uzunluğu veya formatı yanlışsa işlemi başlatmıyoruz
             if (text.length >= 8 && text.length <= 14) {
+              // 1. ÖNCELİK: Arayüzü hemen kilitle ve kamerayı durdur
               setProcessing(true);
+              
+              // Kamerayı durdurmak "İşleniyor" ekranının takılmadan render edilmesini sağlar
+              if (readerRef.current) readerRef.current.reset();
+              setScanning(false);
+
               if (navigator.vibrate) navigator.vibrate(100);
+              
+              // 2. İşlemi dışarıya bildir
               onResult(text);
-              setTimeout(() => setProcessing(false), 2000);
+
+              // 3. 2 saniye sonra sistemi tekrar boşa çıkar
+              setTimeout(() => {
+                setProcessing(false);
+              }, 2000);
             }
           }
         }
