@@ -9,8 +9,10 @@ export default function BarcodeScanner({ onResult }: any) {
   const [scanning, setScanning] = useState(false);
   const [processing, setProcessing] = useState(false);
   
-  // Taramanın duraklatılıp duraklatılmadığını kontrol eden kilit (Kamera kapanmaz)
+  // Güvenlik ve Kilit Mekanizmaları
   const isLocked = useRef<boolean>(false);
+  const lastResult = useRef<string>(""); // Son okunan geçici kod
+  const confirmationCount = useRef<number>(0); // Kaç kez üst üste okunduğu
 
   useEffect(() => {
     const loadScanner = async () => {
@@ -34,6 +36,8 @@ export default function BarcodeScanner({ onResult }: any) {
       setScanning(true);
       setProcessing(false);
       isLocked.current = false;
+      lastResult.current = "";
+      confirmationCount.current = 0;
 
       const constraints = {
         video: { 
@@ -47,24 +51,36 @@ export default function BarcodeScanner({ onResult }: any) {
         constraints,
         videoRef.current,
         (result: any) => {
-          // Barkod bulunduysa VE sistem kilitli (duraklatılmış) değilse:
           if (result && !isLocked.current) {
-            const text = result.getText();
+            const currentText = result.getText();
             
-            // 1. Yazılım seviyesinde kilitle (Kamera akmaya devam eder)
-            isLocked.current = true; 
-            setProcessing(true); 
+            // PEŞ PEŞE DOĞRULAMA KONTROLÜ
+            if (currentText === lastResult.current) {
+              confirmationCount.current += 1;
+            } else {
+              lastResult.current = currentText;
+              confirmationCount.current = 1;
+              return; // Henüz emin değiliz, sonraki kareye bak
+            }
 
-            if (navigator.vibrate) navigator.vibrate(100);
-            
-            // 2. Sonucu gönder
-            onResult(text);
+            // Eğer arka arkaya 3 kez aynı sonucu yakaladıysak:
+            if (confirmationCount.current >= 3) {
+              isLocked.current = true; 
+              setProcessing(true); 
 
-            // 3. 2 saniye sonra kilidi aç (Yeni barkod taranabilir hale gelir)
-            setTimeout(() => {
-              setProcessing(false);
-              isLocked.current = false;
-            }, 2000);
+              if (navigator.vibrate) navigator.vibrate(100);
+              
+              // Sonucu gönder
+              onResult(currentText);
+
+              // 2 saniye sonra sistemi yeni tarama için hazırla
+              setTimeout(() => {
+                setProcessing(false);
+                isLocked.current = false;
+                lastResult.current = "";
+                confirmationCount.current = 0;
+              }, 2000);
+            }
           }
         }
       );
@@ -78,6 +94,8 @@ export default function BarcodeScanner({ onResult }: any) {
     if (readerRef.current) readerRef.current.reset();
     setScanning(false);
     isLocked.current = false;
+    lastResult.current = "";
+    confirmationCount.current = 0;
   };
 
   return (
