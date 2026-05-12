@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useState } from 'react';
 
 interface CameraButtonProps {
@@ -9,7 +11,6 @@ interface CameraButtonProps {
 const CameraButton: React.FC<CameraButtonProps> = ({ scanning, start, stop }) => {
   const [isPressed, setIsPressed] = useState(false);
 
-  // Basıldığında ve çekildiğinde ölçek değişimi
   const handlePress = () => setIsPressed(true);
   const handleRelease = () => setIsPressed(false);
 
@@ -18,15 +19,15 @@ const CameraButton: React.FC<CameraButtonProps> = ({ scanning, start, stop }) =>
       onClick={scanning ? stop : start}
       onMouseDown={handlePress}
       onMouseUp={handleRelease}
-      onMouseLeave={handleRelease} // Fare butondan kayarsa düzelmesi için
+      onMouseLeave={handleRelease}
       onTouchStart={handlePress}
       onTouchEnd={handleRelease}
       style={{
         position: 'absolute',
         top: '24px',
         right: '24px',
-        width: '36px',
-        height: '36px',
+        width: '34px',
+        height: '34px',
         borderRadius: '50%',
         zIndex: 30,
         display: 'flex',
@@ -34,21 +35,19 @@ const CameraButton: React.FC<CameraButtonProps> = ({ scanning, start, stop }) =>
         justifyContent: 'center',
         cursor: 'pointer',
         border: 'none',
-        // Dinamik Arkaplan: Aktifken kırmızı, değilken beyaz
-        background: scanning ? 'rgba(255, 0, 0, 0.8)' : 'rgba(255, 255, 255, 0.5)',
+        background: scanning ? 'rgba(255, 0, 0, 0.6)' : 'rgba(255, 255, 255, 0.5)',
         backdropFilter: 'blur(4px)',
-        // Geçiş Efekti
         transition: 'all 0.2s ease',
         transform: isPressed ? 'scale(0.85)' : 'scale(1)',
-        // Köşeli Çerçeve Engelleyici (Kritik Bölge)
         outline: 'none',
         WebkitTapHighlightColor: 'transparent',
         boxShadow: 'none',
+        touchAction: 'manipulation'
       }}
     >
       <svg 
-        width="18" 
-        height="18" 
+        width="16" 
+        height="16" 
         viewBox="0 0 24 24" 
         fill={scanning ? '#fff' : 'rgba(0, 0, 0, 0.7)'}
         style={{ pointerEvents: 'none' }}
