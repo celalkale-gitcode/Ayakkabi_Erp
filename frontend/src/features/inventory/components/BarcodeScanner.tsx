@@ -8,29 +8,22 @@ export default function BarcodeScanner({ onResult }: any) {
   const readerRef = useRef<any>(null);
   const [scanning, setScanning] = useState(false);
   const [processing, setProcessing] = useState(false);
-  
-  // Hata payını düşürmek için kararlılık kontrolü
-  const lastCode = useRef<string>("");
-  const isLocked = useRef<boolean>(false);
 
   useEffect(() => {
     const loadScanner = async () => {
       try {
-        const { BrowserMultiFormatReader, DecodeHintType, BarcodeFormat } = await import('@zxing/library');
-        const hints = new Map();
-        
-        // Hata payını düşüren en kritik ayarlar
-        hints.set(DecodeHintType.POSSIBLE_FORMATS, [BarcodeFormat.EAN_13, BarcodeFormat.EAN_8, BarcodeFormat.CODE_128]);
-        hints.set(DecodeHintType.TRY_HARDER, true); // Derin analiz
-        hints.set(DecodeHintType.ASSUME_GS1, true);
-
-        readerRef.current = new BrowserMultiFormatReader(hints);
+        const { BrowserMultiFormatReader } = await import('@zxing/library');
+        // Karmaşık "hints" ayarlarını kaldırıp varsayılan hızda başlatıyoruz
+        readerRef.current = new BrowserMultiFormatReader();
       } catch (err) {
         console.error("Scanner yüklenemedi:", err);
       }
     };
     loadScanner();
-    return () => { if (readerRef.current) readerRef.current.reset(); };
+
+    return () => {
+      if (readerRef.current) readerRef.current.reset();
+    };
   }, []);
 
   const start = async () => {
@@ -38,13 +31,13 @@ export default function BarcodeScanner({ onResult }: any) {
     try {
       setScanning(true);
       setProcessing(false);
-      isLocked.current = false;
 
+      // Çözünürlüğü ideal seviyeye çekerek işlemciyi rahatlatıyoruz
       const constraints = {
         video: { 
-          facingMode: "environment", 
-          width: { ideal: 1280 }, 
-          height: { ideal: 720 } 
+          facingMode: "environment",
+          width: { ideal: 640 }, 
+          height: { ideal: 480 } 
         }
       };
 
@@ -52,34 +45,29 @@ export default function BarcodeScanner({ onResult }: any) {
         constraints,
         videoRef.current,
         (result: any) => {
-          if (result && !isLocked.current) {
-            const code = result.getText();
+          if (result && !processing) {
+            const text = result.getText();
+            
+            // Okuma gerçekleştiği an:
+            setProcessing(true); // 1. Ekranı kilitle
+            if (navigator.vibrate) navigator.vibrate(100);
+            
+            // 2. Kamerayı hemen durdur (Takılmayı önlemek için kritik)
+            if (readerRef.current) readerRef.current.reset();
+            setScanning(false);
 
-            // Sadece geçerli uzunluktaki barkodları ciddiye al (Hatalı kısa okumaları eler)
-            if (code.length >= 8) {
-              isLocked.current = true; // İlk bulguda kilitle
-              
-              setProcessing(true);
-              if (navigator.vibrate) navigator.vibrate(100);
-              
-              // Tarayıcıyı hemen durdur (Hızı ve "İşleniyor" ekranını kurtarır)
-              if (readerRef.current) readerRef.current.reset();
-              setScanning(false);
+            // 3. Sonucu gönder
+            onResult(text);
 
-              // Sonucu gönder
-              onResult(code);
-              
-              // 2.5 saniye bekleme süresi
-              setTimeout(() => {
-                setProcessing(false);
-                isLocked.current = false;
-              }, 2500);
-            }
+            // 4. 2 saniye sonra sistemi boşa çıkar
+            setTimeout(() => {
+              setProcessing(false);
+            }, 2000);
           }
         }
       );
     } catch (err) {
-      console.error("Kamera hatası:", err);
+      console.error("Kamera başlatılamadı:", err);
       setScanning(false);
     }
   };
@@ -87,7 +75,6 @@ export default function BarcodeScanner({ onResult }: any) {
   const stop = () => {
     if (readerRef.current) readerRef.current.reset();
     setScanning(false);
-    isLocked.current = false;
   };
 
   return (
@@ -102,7 +89,7 @@ export default function BarcodeScanner({ onResult }: any) {
       }}>
         <video ref={videoRef} playsInline style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
 
-        {/* Köşeler */}
+        {/* Köşe Çizgileri */}
         <div style={{ position: 'absolute', top: '15px', left: '15px', width: '20px', height: '20px', borderTop: '3px solid rgba(255,255,255,0.4)', borderLeft: '3px solid rgba(255,255,255,0.4)', borderRadius: '4px 0 0 0' }} />
         <div style={{ position: 'absolute', top: '15px', right: '15px', width: '20px', height: '20px', borderTop: '3px solid rgba(255,255,255,0.4)', borderRight: '3px solid rgba(255,255,255,0.4)', borderRadius: '0 4px 0 0' }} />
         <div style={{ position: 'absolute', bottom: '15px', left: '15px', width: '20px', height: '20px', borderBottom: '3px solid rgba(255,255,255,0.4)', borderLeft: '3px solid rgba(255,255,255,0.4)', borderRadius: '0 0 0 4px' }} />
@@ -112,12 +99,11 @@ export default function BarcodeScanner({ onResult }: any) {
         {scanning && !processing && (
           <div style={{ 
             position: 'absolute', left: '12%', right: '12%', height: '1.5px', background: 'rgba(255, 0, 0, 0.4)',
-            boxShadow: '0 0 10px 1px rgba(255, 0, 0, 0.4), 0 0 4px 0px rgba(255, 255, 255, 0.2)',
-            zIndex: 10, animation: 'scanMove 3s ease-in-out infinite' 
+            boxShadow: '0 0 10px 1px rgba(255, 0, 0, 0.4)', zIndex: 10, animation: 'scanMove 3s ease-in-out infinite' 
           }} />
         )}
 
-        {/* İşleniyor */}
+        {/* İşleniyor Ekranı */}
         {processing && (
           <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 20 }}>
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
