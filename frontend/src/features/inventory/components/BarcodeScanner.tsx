@@ -11,18 +11,20 @@ export default function BarkodScanner({ onResult }: any) {
   const [deviceId, setDeviceId] = useState('');
 
   useEffect(() => {
-    // Odaklanma ve hız için sadece barkod formatlarını tanımlıyoruz
     const hints = new Map();
-    const formats = [BarcodeFormat.EAN_13, BarcodeFormat.CODE_128, BarcodeFormat.QR_CODE, BarcodeFormat.EAN_8];
+    const formats = [BarcodeFormat.EAN_13, BarcodeFormat.CODE_128, BarcodeFormat.EAN_8];
     hints.set(DecodeHintType.POSSIBLE_FORMATS, formats);
-    hints.set(DecodeHintType.TRY_HARDER, true); // Daha derin analiz (Odaklanma yardımı)
+    hints.set(DecodeHintType.TRY_HARDER, true);
     
     readerRef.current = new BrowserMultiFormatReader(hints);
 
-    BrowserMultiFormatReader.listVideoInputDevices().then((devices) => {
-      const back = devices.find(d => d.label.toLowerCase().includes('back') || d.label.toLowerCase().includes('arka'));
-      setDeviceId(back?.deviceId || devices[0]?.deviceId || '');
-    });
+    // Build hatasını çözen güvenli cihaz listeleme yöntemi
+    navigator.mediaDevices.enumerateDevices().then((devices) => {
+      const videoDevices = devices.filter(device => device.kind === 'videoinput');
+      const back = videoDevices.find(d => d.label.toLowerCase().includes('back') || d.label.toLowerCase().includes('arka'));
+      setDeviceId(back?.deviceId || videoDevices[0]?.deviceId || '');
+    }).catch(err => console.error("Kamera erişim hatası:", err));
+
     return () => stop();
   }, []);
 
@@ -36,10 +38,8 @@ export default function BarkodScanner({ onResult }: any) {
         video: { 
           deviceId: { exact: deviceId },
           facingMode: 'environment',
-          width: { ideal: 1280 }, // Netlik için yüksek çözünürlük
-          height: { ideal: 720 },
-          // @ts-ignore - Bazı tarayıcılarda odaklanma desteği
-          focusMode: 'continuous' 
+          width: { ideal: 1280 },
+          height: { ideal: 720 }
         }
       });
       
@@ -83,13 +83,13 @@ export default function BarkodScanner({ onResult }: any) {
         
         <video ref={videoRef} playsInline style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
 
-        {/* 1mm KÜÇÜLTÜLMÜŞ KÖŞE ÇİZGİLERİ */}
+        {/* PRO KÖŞE ÇİZGİLERİ (1mm içeride) */}
         <div style={{ position: 'absolute', top: '2px', left: '2px', width: '25px', height: '25px', borderTop: '4px solid #fff', borderLeft: '4px solid #fff' }} />
         <div style={{ position: 'absolute', top: '2px', right: '2px', width: '25px', height: '25px', borderTop: '4px solid #fff', borderRight: '4px solid #fff' }} />
         <div style={{ position: 'absolute', bottom: '2px', left: '2px', width: '25px', height: '25px', borderBottom: '4px solid #fff', borderLeft: '4px solid #fff' }} />
         <div style={{ position: 'absolute', bottom: '2px', right: '2px', width: '25px', height: '25px', borderBottom: '4px solid #fff', borderRight: '4px solid #fff' }} />
 
-        {/* BLUR VE ŞEFFAF LAZER */}
+        {/* BLUR KIRMIZI LAZER */}
         {scanning && !processing && (
           <div style={{ 
             position: 'absolute', 
@@ -97,29 +97,29 @@ export default function BarkodScanner({ onResult }: any) {
             left: '12%', 
             right: '12%', 
             height: '2px', 
-            background: 'rgba(255, 0, 0, 0.4)', // Şeffaf kırmızı
-            boxShadow: '0 0 12px 3px rgba(255, 0, 0, 0.6)', // Blur efekti
+            background: 'rgba(255, 0, 0, 0.4)', 
+            boxShadow: '0 0 12px 3px rgba(255, 0, 0, 0.6)', 
             zIndex: 5 
           }} />
         )}
 
-        {/* ŞEFFAF İŞLENİYOR EKRANI */}
+        {/* ŞEFFAF İŞLENİYOR */}
         {processing && (
           <div style={{ 
             position: 'absolute', 
             inset: 0, 
-            background: 'rgba(0,0,0,0.5)', // Daha şeffaf arka plan
+            background: 'rgba(0,0,0,0.5)', 
             display: 'flex', 
             alignItems: 'center', 
             justifyContent: 'center',
-            backdropFilter: 'blur(2px)', // Hafif cam efekti
+            backdropFilter: 'blur(3px)',
             zIndex: 20
           }}>
             <span style={{ color: '#fff', fontWeight: '500', fontSize: '16px', letterSpacing: '1px' }}>İŞLENİYOR...</span>
           </div>
         )}
 
-        {/* PRO İKON */}
+        {/* BEYAZ TRANSPARAN BUTON + SİYAH İKON */}
         {!processing && (
           <button
             onClick={scanning ? stop : start}
