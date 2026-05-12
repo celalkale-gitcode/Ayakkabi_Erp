@@ -240,15 +240,15 @@ export default function BarkodScanner({ onResult, onClose }: any) {
           transform: 'translate(-110px,-60px)',
         }}>
 
-          {/* CAMERA ICON BUTTON (SAĞ ÜST) */}
+          {/* CAMERA ICON BUTTON (TEK KONTROL) */}
           <button
             onClick={scanning ? stop : start}
             style={{
               position: 'absolute',
               top: '-42px',
               right: '-10px',
-              width: '36px',
-              height: '36px',
+              width: '40px',
+              height: '40px',
               borderRadius: '50%',
               border: 'none',
               background: scanning ? '#ef4444' : '#22c55e',
@@ -290,36 +290,9 @@ export default function BarkodScanner({ onResult, onClose }: any) {
 
       </div>
 
-      {/* FOOTER */}
-      <div style={{ padding: '16px' }}>
-
-        <button
-          onClick={scanning ? stop : start}
-          style={{
-            width: '100%',
-            height: '48px',
-            borderRadius: '12px',
-            border: 'none',
-            background: scanning ? '#ef4444' : '#22c55e',
-            color: '#fff',
-            fontWeight: 800,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '8px',
-          }}
-        >
-          <span className="material-icons">
-            {scanning ? 'stop' : 'photo_camera'}
-          </span>
-
-          {scanning ? 'DURDUR' : 'KAMERAYI BAŞLAT'}
-        </button>
-
-      </div>
-
       {/* MATERIAL ICONS */}
       <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" />
+
     </div>
   );
 }
