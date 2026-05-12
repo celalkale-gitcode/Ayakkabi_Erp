@@ -53,16 +53,6 @@ export default function BarcodeScanner({ onResult }: any) {
     setScanning(false);
   };
 
-  // Köşe çizgileri için ortak stil (Transparan Beyaz)
-  const cornerStyle: React.CSSProperties = {
-    position: 'absolute',
-    width: '20px',
-    height: '20px',
-    borderColor: 'rgba(255, 255, 255, 0.4)', // %40 transparan beyaz
-    borderStyle: 'solid',
-    pointerEvents: 'none'
-  };
-
   return (
     <div style={{ width: '100%', maxWidth: '400px', margin: '0 auto' }}>
       <style>{`
@@ -83,17 +73,18 @@ export default function BarcodeScanner({ onResult }: any) {
         overflow: 'hidden',
         boxShadow: '0 10px 30px rgba(0,0,0,0.5)'
       }}>
+        {/* KAMERA GÖRÜNTÜSÜ */}
         <video 
           ref={videoRef} 
           playsInline 
           style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
         />
 
-        {/* TRANSPARAN KÖŞE ÇERÇEVELERİ */}
-        <div style={{ ...cornerStyle, top: '12px', left: '12px', borderTopWidth: '3px', borderLeftWidth: '3px', borderRadius: '4px 0 0 0' }} />
-        <div style={{ ...cornerStyle, top: '12px', right: '12px', borderTopWidth: '3px', borderRightWidth: '3px', borderRadius: '0 4px 0 0' }} />
-        <div style={{ ...cornerStyle, bottom: '12px', left: '12px', borderBottomWidth: '3px', borderLeftWidth: '3px', borderRadius: '0 0 0 4px' }} />
-        <div style={{ ...cornerStyle, bottom: '12px', right: '12px', borderBottomWidth: '3px', borderRightWidth: '3px', borderRadius: '0 0 4px 0' }} />
+        {/* TRANSPARAN KÖŞE ÇERÇEVELERİ (L ŞEKLİ KORUNDU) */}
+        <div style={{ position: 'absolute', top: '10px', left: '10px', width: '20px', height: '20px', borderTop: '3px solid rgba(255,255,255,0.4)', borderLeft: '3px solid rgba(255,255,255,0.4)', borderRadius: '4px 0 0 0' }} />
+        <div style={{ position: 'absolute', top: '10px', right: '10px', width: '20px', height: '20px', borderTop: '3px solid rgba(255,255,255,0.4)', borderRight: '3px solid rgba(255,255,255,0.4)', borderRadius: '0 4px 0 0' }} />
+        <div style={{ position: 'absolute', bottom: '10px', left: '10px', width: '20px', height: '20px', borderBottom: '3px solid rgba(255,255,255,0.4)', borderLeft: '3px solid rgba(255,255,255,0.4)', borderRadius: '0 0 0 4px' }} />
+        <div style={{ position: 'absolute', bottom: '10px', right: '10px', width: '20px', height: '20px', borderBottom: '3px solid rgba(255,255,255,0.4)', borderRight: '3px solid rgba(255,255,255,0.4)', borderRadius: '0 0 4px 0' }} />
 
         {/* HAREKETLİ LAZER */}
         {scanning && !processing && (
