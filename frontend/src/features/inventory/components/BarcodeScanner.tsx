@@ -240,15 +240,15 @@ export default function BarkodScanner({ onResult, onClose }: any) {
           transform: 'translate(-110px,-60px)',
         }}>
 
-          {/* CAMERA ICON BUTTON (TEK KONTROL) */}
+          {/* 📷 CAMERA ICON (ÇERÇEVE İÇİNDE SAĞ ÜST) */}
           <button
             onClick={scanning ? stop : start}
             style={{
               position: 'absolute',
-              top: '-42px',
-              right: '-10px',
-              width: '40px',
-              height: '40px',
+              top: '6px',
+              right: '6px',
+              width: '38px',
+              height: '38px',
               borderRadius: '50%',
               border: 'none',
               background: scanning ? '#ef4444' : '#22c55e',
@@ -256,8 +256,8 @@ export default function BarkodScanner({ onResult, onClose }: any) {
               alignItems: 'center',
               justifyContent: 'center',
               cursor: 'pointer',
+              zIndex: 20,
               boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
-              pointerEvents: 'auto',
             }}
           >
             <span className="material-icons" style={{ color: '#fff', fontSize: '20px' }}>
