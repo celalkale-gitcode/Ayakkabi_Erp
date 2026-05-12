@@ -8,12 +8,14 @@ export default function BarcodeScanner({ onResult }: any) {
   const readerRef = useRef<any>(null);
   const [scanning, setScanning] = useState(false);
   const [processing, setProcessing] = useState(false);
+  
+  // Taramanın duraklatılıp duraklatılmadığını kontrol eden kilit (Kamera kapanmaz)
+  const isLocked = useRef<boolean>(false);
 
   useEffect(() => {
     const loadScanner = async () => {
       try {
         const { BrowserMultiFormatReader } = await import('@zxing/library');
-        // Karmaşık "hints" ayarlarını kaldırıp varsayılan hızda başlatıyoruz
         readerRef.current = new BrowserMultiFormatReader();
       } catch (err) {
         console.error("Scanner yüklenemedi:", err);
@@ -31,8 +33,8 @@ export default function BarcodeScanner({ onResult }: any) {
     try {
       setScanning(true);
       setProcessing(false);
+      isLocked.current = false;
 
-      // Çözünürlüğü ideal seviyeye çekerek işlemciyi rahatlatıyoruz
       const constraints = {
         video: { 
           facingMode: "environment",
@@ -45,23 +47,23 @@ export default function BarcodeScanner({ onResult }: any) {
         constraints,
         videoRef.current,
         (result: any) => {
-          if (result && !processing) {
+          // Barkod bulunduysa VE sistem kilitli (duraklatılmış) değilse:
+          if (result && !isLocked.current) {
             const text = result.getText();
             
-            // Okuma gerçekleştiği an:
-            setProcessing(true); // 1. Ekranı kilitle
+            // 1. Yazılım seviyesinde kilitle (Kamera akmaya devam eder)
+            isLocked.current = true; 
+            setProcessing(true); 
+
             if (navigator.vibrate) navigator.vibrate(100);
             
-            // 2. Kamerayı hemen durdur (Takılmayı önlemek için kritik)
-            if (readerRef.current) readerRef.current.reset();
-            setScanning(false);
-
-            // 3. Sonucu gönder
+            // 2. Sonucu gönder
             onResult(text);
 
-            // 4. 2 saniye sonra sistemi boşa çıkar
+            // 3. 2 saniye sonra kilidi aç (Yeni barkod taranabilir hale gelir)
             setTimeout(() => {
               setProcessing(false);
+              isLocked.current = false;
             }, 2000);
           }
         }
@@ -75,6 +77,7 @@ export default function BarcodeScanner({ onResult }: any) {
   const stop = () => {
     if (readerRef.current) readerRef.current.reset();
     setScanning(false);
+    isLocked.current = false;
   };
 
   return (
@@ -105,7 +108,7 @@ export default function BarcodeScanner({ onResult }: any) {
 
         {/* İşleniyor Ekranı */}
         {processing && (
-          <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 20 }}>
+          <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(2px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 20 }}>
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
               <span style={{ color: '#fff', fontSize: '13px', fontWeight: '600', letterSpacing: '2px' }}>İŞLENİYOR</span>
               <div style={{ width: '30px', height: '2px', background: '#ff0000' }}></div>
