@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
+import './button_style.css';
 
 export default function BarcodeScanner({ onResult }: any) {
   const videoRef = useRef<HTMLVideoElement>(null);
