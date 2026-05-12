@@ -131,9 +131,9 @@ export default function BarkodScanner({ onResult, onClose }: any) {
 
   return (
     <div style={{
-      width: '92%',
-      maxWidth: '320px',
-      margin: '12px auto',
+      width: '100%',
+      maxWidth: '420px',
+      margin: '0 auto',
       background: '#111827',
       borderRadius: '24px',
       overflow: 'hidden',
@@ -144,7 +144,7 @@ export default function BarkodScanner({ onResult, onClose }: any) {
       {/* HEADER */}
       <div style={{
         height: '52px',
-        padding: '0 18px',
+        padding: '0 14px',
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
@@ -193,11 +193,11 @@ export default function BarkodScanner({ onResult, onClose }: any) {
         </div>
       </div>
 
-      {/* CAMERA */}
+      {/* CAMERA FULL WIDTH AREA */}
       <div style={{
         position: 'relative',
         width: '100%',
-        height: '220px',
+        height: '320px',
         backgroundColor: '#000',
         overflow: 'hidden',
       }}>
@@ -223,32 +223,41 @@ export default function BarkodScanner({ onResult, onClose }: any) {
             <defs>
               <mask id="m">
                 <rect width="100%" height="100%" fill="white" />
-                <rect x="50%" y="50%" width="220" height="120" rx="20" fill="black" transform="translate(-110,-60)" />
+                <rect
+                  x="50%"
+                  y="50%"
+                  width="86%"
+                  height="140"
+                  rx="18"
+                  fill="black"
+                  transform="translate(-43%, -70)"
+                />
               </mask>
             </defs>
-            <rect width="100%" height="100%" fill="rgba(0,0,0,0.6)" mask="url(#m)" />
+
+            <rect width="100%" height="100%" fill="rgba(0,0,0,0.55)" mask="url(#m)" />
           </svg>
         </div>
 
-        {/* FRAME */}
+        {/* RESPONSIVE FRAME */}
         <div style={{
           position: 'absolute',
           top: '50%',
           left: '50%',
-          width: '220px',
-          height: '120px',
-          transform: 'translate(-110px,-60px)',
+          width: '86%',
+          height: '140px',
+          transform: 'translate(-50%, -50%)',
         }}>
 
-          {/* 📷 CAMERA ICON (ÇERÇEVE İÇİNDE SAĞ ÜST) */}
+          {/* CAMERA ICON */}
           <button
             onClick={scanning ? stop : start}
             style={{
               position: 'absolute',
               top: '6px',
               right: '6px',
-              width: '38px',
-              height: '38px',
+              width: '42px',
+              height: '42px',
               borderRadius: '50%',
               border: 'none',
               background: scanning ? '#ef4444' : '#22c55e',
@@ -257,7 +266,7 @@ export default function BarkodScanner({ onResult, onClose }: any) {
               justifyContent: 'center',
               cursor: 'pointer',
               zIndex: 20,
-              boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.35)',
             }}
           >
             <span className="material-icons" style={{ color: '#fff', fontSize: '20px' }}>
@@ -265,11 +274,11 @@ export default function BarkodScanner({ onResult, onClose }: any) {
             </span>
           </button>
 
-          {/* FRAME CORNERS */}
-          <div style={{ position: 'absolute', top: 0, left: 0, width: 26, height: 26, borderTop: '5px solid white', borderLeft: '5px solid white' }} />
-          <div style={{ position: 'absolute', top: 0, right: 0, width: 26, height: 26, borderTop: '5px solid white', borderRight: '5px solid white' }} />
-          <div style={{ position: 'absolute', bottom: 0, left: 0, width: 26, height: 26, borderBottom: '5px solid white', borderLeft: '5px solid white' }} />
-          <div style={{ position: 'absolute', bottom: 0, right: 0, width: 26, height: 26, borderBottom: '5px solid white', borderRight: '5px solid white' }} />
+          {/* CORNERS */}
+          <div style={{ position: 'absolute', top: 0, left: 0, width: 28, height: 28, borderTop: '4px solid white', borderLeft: '4px solid white' }} />
+          <div style={{ position: 'absolute', top: 0, right: 0, width: 28, height: 28, borderTop: '4px solid white', borderRight: '4px solid white' }} />
+          <div style={{ position: 'absolute', bottom: 0, left: 0, width: 28, height: 28, borderBottom: '4px solid white', borderLeft: '4px solid white' }} />
+          <div style={{ position: 'absolute', bottom: 0, right: 0, width: 28, height: 28, borderBottom: '4px solid white', borderRight: '4px solid white' }} />
 
         </div>
 
@@ -290,7 +299,7 @@ export default function BarkodScanner({ onResult, onClose }: any) {
 
       </div>
 
-      {/* MATERIAL ICONS */}
+      {/* ICON FONT */}
       <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" />
 
     </div>
