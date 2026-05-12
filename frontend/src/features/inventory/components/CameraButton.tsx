@@ -1,70 +1,62 @@
-import React from 'react';
+import React, { useState } from 'react';
 
-// Props tiplerini tanımlıyoruz
 interface CameraButtonProps {
   scanning: boolean;
   start: () => void;
   stop: () => void;
-  processing: boolean;
 }
 
-const CameraButton: React.FC<CameraButtonProps> = ({ scanning, start, stop, processing }) => {
-  if (processing) return null;
+const CameraButton: React.FC<CameraButtonProps> = ({ scanning, start, stop }) => {
+  const [isPressed, setIsPressed] = useState(false);
 
-  const handleTouchStart = (e: React.TouchEvent<HTMLButtonElement> | React.MouseEvent<HTMLButtonElement>) => {
-    e.currentTarget.style.transform = 'scale(0.85)';
-  };
-
-  const handleTouchEnd = (e: React.TouchEvent<HTMLButtonElement> | React.MouseEvent<HTMLButtonElement>) => {
-    e.currentTarget.style.transform = 'scale(1)';
-  };
+  // Basıldığında ve çekildiğinde ölçek değişimi
+  const handlePress = () => setIsPressed(true);
+  const handleRelease = () => setIsPressed(false);
 
   return (
     <button
       onClick={scanning ? stop : start}
-      onMouseDown={handleTouchStart}
-      onMouseUp={handleTouchEnd}
-      onTouchStart={handleTouchStart}
-      onTouchEnd={handleTouchEnd}
+      onMouseDown={handlePress}
+      onMouseUp={handleRelease}
+      onMouseLeave={handleRelease} // Fare butondan kayarsa düzelmesi için
+      onTouchStart={handlePress}
+      onTouchEnd={handleRelease}
       style={{
         position: 'absolute',
         top: '24px',
         right: '24px',
-        width: '38px',
-        height: '38px',
+        width: '36px',
+        height: '36px',
         borderRadius: '50%',
-        // Aktifken kırmızı, değilse yarı şeffaf beyaz
-        background: scanning ? 'rgba(220, 38, 38, 0.9)' : 'rgba(255, 255, 255, 0.5)',
-        border: 'none',
+        zIndex: 30,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
         cursor: 'pointer',
-        zIndex: 30,
-        transition: 'all 0.2s ease',
+        border: 'none',
+        // Dinamik Arkaplan: Aktifken kırmızı, değilken beyaz
+        background: scanning ? 'rgba(255, 0, 0, 0.8)' : 'rgba(255, 255, 255, 0.5)',
         backdropFilter: 'blur(4px)',
+        // Geçiş Efekti
+        transition: 'all 0.2s ease',
+        transform: isPressed ? 'scale(0.85)' : 'scale(1)',
+        // Köşeli Çerçeve Engelleyici (Kritik Bölge)
         outline: 'none',
-        boxShadow: '0 2px 10px rgba(0,0,0,0.15)',
-        WebkitTapHighlightColor: 'transparent', // Köşeli mavi kutuyu silen sihirli satır
+        WebkitTapHighlightColor: 'transparent',
+        boxShadow: 'none',
       }}
     >
-      <svg
-        width="20"
-        height="20"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke={scanning ? "white" : "#333"}
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
+      <svg 
+        width="18" 
+        height="18" 
+        viewBox="0 0 24 24" 
+        fill={scanning ? '#fff' : 'rgba(0, 0, 0, 0.7)'}
         style={{ pointerEvents: 'none' }}
       >
-        <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
-        <circle cx="12" cy="13" r="4" />
+        <path d="M9 2L7.17 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2h-3.17L15 2H9zm3 15c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5z"/>
       </svg>
     </button>
   );
 };
 
 export default CameraButton;
-
