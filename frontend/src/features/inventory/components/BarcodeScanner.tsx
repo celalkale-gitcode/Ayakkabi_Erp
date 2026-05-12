@@ -1,18 +1,24 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
-import { BrowserMultiFormatReader } from '@zxing/browser';
+import { BrowserMultiFormatReader, DecodeHintType, BarcodeFormat } from '@zxing/library';
 
-export default function BarkodScanner({ onResult, onClose }: any) {
+export default function BarkodScanner({ onResult }: any) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const readerRef = useRef<BrowserMultiFormatReader | null>(null);
   const [scanning, setScanning] = useState(false);
-  const [processing, setProcessing] = useState(false); // İşleniyor durumu
+  const [processing, setProcessing] = useState(false);
   const [deviceId, setDeviceId] = useState('');
-  const controlsRef = useRef<any>(null);
 
   useEffect(() => {
-    readerRef.current = new BrowserMultiFormatReader();
+    // Odaklanma ve hız için sadece barkod formatlarını tanımlıyoruz
+    const hints = new Map();
+    const formats = [BarcodeFormat.EAN_13, BarcodeFormat.CODE_128, BarcodeFormat.QR_CODE, BarcodeFormat.EAN_8];
+    hints.set(DecodeHintType.POSSIBLE_FORMATS, formats);
+    hints.set(DecodeHintType.TRY_HARDER, true); // Daha derin analiz (Odaklanma yardımı)
+    
+    readerRef.current = new BrowserMultiFormatReader(hints);
+
     BrowserMultiFormatReader.listVideoInputDevices().then((devices) => {
       const back = devices.find(d => d.label.toLowerCase().includes('back') || d.label.toLowerCase().includes('arka'));
       setDeviceId(back?.deviceId || devices[0]?.deviceId || '');
@@ -25,32 +31,39 @@ export default function BarkodScanner({ onResult, onClose }: any) {
     try {
       setScanning(true);
       setProcessing(false);
-      const controls = await readerRef.current!.decodeFromVideoDevice(
-        deviceId,
-        videoRef.current,
-        (result) => {
-          if (result && !processing) {
-            setProcessing(true); // Barkod okunduğu an yazı çıksın
-            if (navigator.vibrate) navigator.vibrate(100);
-            onResult(result.getText());
-            
-            // 2 saniye sonra ekranı temizle ve durdur (opsiyonel)
-            setTimeout(() => {
-              setProcessing(false);
-            }, 2000);
-          }
+      
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { 
+          deviceId: { exact: deviceId },
+          facingMode: 'environment',
+          width: { ideal: 1280 }, // Netlik için yüksek çözünürlük
+          height: { ideal: 720 },
+          // @ts-ignore - Bazı tarayıcılarda odaklanma desteği
+          focusMode: 'continuous' 
         }
-      );
-      controlsRef.current = controls;
+      });
+      
+      videoRef.current.srcObject = stream;
+
+      readerRef.current?.decodeFromVideoElement(videoRef.current, (result) => {
+        if (result && !processing) {
+          setProcessing(true);
+          if (navigator.vibrate) navigator.vibrate(100);
+          onResult(result.getText());
+          setTimeout(() => setProcessing(false), 2000);
+        }
+      });
     } catch (e) {
       setScanning(false);
     }
   };
 
   const stop = () => {
-    if (controlsRef.current) {
-      controlsRef.current.stop();
-      controlsRef.current = null;
+    readerRef.current?.reset();
+    if (videoRef.current?.srcObject) {
+      const stream = videoRef.current.srcObject as MediaStream;
+      stream.getTracks().forEach(track => track.stop());
+      videoRef.current.srcObject = null;
     }
     setScanning(false);
     setProcessing(false);
@@ -58,50 +71,55 @@ export default function BarkodScanner({ onResult, onClose }: any) {
 
   return (
     <div style={{ width: '100%', maxWidth: '400px', margin: '0 auto', overflow: 'hidden' }}>
-      
-      {/* KAMERA VE ÇERÇEVE ALANI */}
       <div style={{ 
         position: 'relative', 
         width: '100%', 
         aspectRatio: '1.5', 
         background: '#000', 
         borderRadius: '12px',
-        border: '2px solid rgba(255,255,255,0.2)',
+        border: '1px solid rgba(255,255,255,0.1)',
         overflow: 'hidden'
       }}>
         
-        <video 
-          ref={videoRef} 
-          style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
-        />
+        <video ref={videoRef} playsInline style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
 
-        {/* BARKOD KÖŞE ÇİZGİLERİ */}
-        <div style={{ position: 'absolute', top: 0, left: 0, width: '25px', height: '25px', borderTop: '4px solid #fff', borderLeft: '4px solid #fff' }} />
-        <div style={{ position: 'absolute', top: 0, right: 0, width: '25px', height: '25px', borderTop: '4px solid #fff', borderRight: '4px solid #fff' }} />
-        <div style={{ position: 'absolute', bottom: 0, left: 0, width: '25px', height: '25px', borderBottom: '4px solid #fff', borderLeft: '4px solid #fff' }} />
-        <div style={{ position: 'absolute', bottom: 0, right: 0, width: '25px', height: '25px', borderBottom: '4px solid #fff', borderRight: '4px solid #fff' }} />
+        {/* 1mm KÜÇÜLTÜLMÜŞ KÖŞE ÇİZGİLERİ */}
+        <div style={{ position: 'absolute', top: '2px', left: '2px', width: '25px', height: '25px', borderTop: '4px solid #fff', borderLeft: '4px solid #fff' }} />
+        <div style={{ position: 'absolute', top: '2px', right: '2px', width: '25px', height: '25px', borderTop: '4px solid #fff', borderRight: '4px solid #fff' }} />
+        <div style={{ position: 'absolute', bottom: '2px', left: '2px', width: '25px', height: '25px', borderBottom: '4px solid #fff', borderLeft: '4px solid #fff' }} />
+        <div style={{ position: 'absolute', bottom: '2px', right: '2px', width: '25px', height: '25px', borderBottom: '4px solid #fff', borderRight: '4px solid #fff' }} />
 
-        {/* KIRMIZI LAZER */}
+        {/* BLUR VE ŞEFFAF LAZER */}
         {scanning && !processing && (
-          <div style={{ position: 'absolute', top: '50%', left: '10%', right: '10%', height: '2px', background: 'red', boxShadow: '0 0 10px red', zIndex: 5 }} />
+          <div style={{ 
+            position: 'absolute', 
+            top: '50%', 
+            left: '12%', 
+            right: '12%', 
+            height: '2px', 
+            background: 'rgba(255, 0, 0, 0.4)', // Şeffaf kırmızı
+            boxShadow: '0 0 12px 3px rgba(255, 0, 0, 0.6)', // Blur efekti
+            zIndex: 5 
+          }} />
         )}
 
-        {/* İŞLENİYOR YAZISI (OKUMA YAPILDIĞINDA ÇIKAR) */}
+        {/* ŞEFFAF İŞLENİYOR EKRANI */}
         {processing && (
           <div style={{ 
             position: 'absolute', 
             inset: 0, 
-            background: 'rgba(0,0,0,0.7)', 
+            background: 'rgba(0,0,0,0.5)', // Daha şeffaf arka plan
             display: 'flex', 
             alignItems: 'center', 
             justifyContent: 'center',
+            backdropFilter: 'blur(2px)', // Hafif cam efekti
             zIndex: 20
           }}>
-            <span style={{ color: '#fff', fontWeight: 'bold', fontSize: '18px', letterSpacing: '2px' }}>İŞLENİYOR...</span>
+            <span style={{ color: '#fff', fontWeight: '500', fontSize: '16px', letterSpacing: '1px' }}>İŞLENİYOR...</span>
           </div>
         )}
 
-        {/* BEYAZ DAİRE + SİYAH KAMERA İKONU */}
+        {/* PRO İKON */}
         {!processing && (
           <button
             onClick={scanning ? stop : start}
@@ -109,10 +127,10 @@ export default function BarkodScanner({ onResult, onClose }: any) {
               position: 'absolute',
               top: '15px',
               right: '15px',
-              width: '40px',
-              height: '40px',
+              width: '38px',
+              height: '38px',
               borderRadius: '50%',
-              background: 'rgba(255, 255, 255, 0.75)',
+              background: 'rgba(255, 255, 255, 0.7)',
               border: 'none',
               display: 'flex',
               alignItems: 'center',
@@ -121,7 +139,7 @@ export default function BarkodScanner({ onResult, onClose }: any) {
               zIndex: 10
             }}
           >
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="black">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="black">
               <path d="M9 2L7.17 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2h-3.17L15 2H9zm3 15c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5z"/>
             </svg>
           </button>
