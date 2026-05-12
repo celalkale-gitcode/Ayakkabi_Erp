@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
-import './button_style.css';
+import CameraButton from './CameraButton'; // CameraButton dosyasının aynı klasörde olduğunu varsayıyoruz
 
 export default function BarcodeScanner({ onResult }: any) {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -64,16 +64,16 @@ export default function BarcodeScanner({ onResult }: any) {
         }
       `}</style>
 
-      {/* ANA ÇERÇEVE: BLUR VE GÖLGE KALDIRILDI, KESKİNLEŞTİRİLDİ */}
+      {/* ANA ÇERÇEVE */}
       <div style={{ 
         position: 'relative', 
         width: '100%', 
         aspectRatio: '1.8', 
         background: '#000', 
-        borderRadius: '12px', // Hafif kavis korundu, istersen 0 yapıp tam kare yapabilirsin
-        border: '1px solid rgba(255,255,255,0.3)', // Çizgi biraz daha netleştirildi
+        borderRadius: '12px',
+        border: '1px solid rgba(255,255,255,0.3)',
         overflow: 'hidden',
-        boxShadow: 'none' // TÜM GÖLGE VE BLUR EFEKTİ KALDIRILDI
+        boxShadow: 'none'
       }}>
         <video 
           ref={videoRef} 
@@ -104,7 +104,7 @@ export default function BarcodeScanner({ onResult }: any) {
         {/* İŞLENİYOR EKRANI */}
         {processing && (
           <div style={{ 
-            position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.7)', // Biraz daha koyulaştırıldı
+            position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.7)',
             display: 'flex', alignItems: 'center', justifyContent: 'center', 
             zIndex: 20 
           }}>
@@ -115,35 +115,9 @@ export default function BarcodeScanner({ onResult }: any) {
           </div>
         )}
 
-  {/* KAMERA BUTONU */}
+        {/* KAMERA BUTONU BİLEŞENİ */}
         {!processing && (
-           <button
-  onClick={scanning ? stop : start}
-  style={{
-    // Mevcut kodlarınız...
-    position: 'absolute',
-    top: '24px',
-    right: '24px',
-    width: '34px',
-    height: '34px',
-    borderRadius: '50%',
-    
-    // ÇÖZÜM İÇİN BURASI KRİTİK:
-    outline: '0',
-    outlineOffset: '0',
-    WebkitTapHighlightColor: 'transparent',
-    WebkitAppearance: 'none',
-    boxShadow: 'none',
-    
-    // Bazı tarayıcılar için "touch" olayını optimize edin
-    touchAction: 'manipulation' 
-  }}
->
-
-            <svg width="16" height="16" viewBox="0 0 24 24" fill={scanning ? '#fff' : 'rgba(0, 0, 0, 0.7)'}>
-              <path d="M9 2L7.17 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2h-3.17L15 2H9zm3 15c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5z"/>
-            </svg>
-          </button>
+          <CameraButton scanning={scanning} start={start} stop={stop} />
         )}
       </div>
     </div>
