@@ -30,12 +30,7 @@ export default function BarkodScanner({ onResult, onClose }: any) {
       if (!videoRef.current || !readerRef.current) return;
       setScanning(true);
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { 
-          deviceId: deviceId ? { exact: deviceId } : undefined, 
-          facingMode: 'environment',
-          width: { ideal: 1280 },
-          height: { ideal: 720 }
-        }
+        video: { deviceId: deviceId ? { exact: deviceId } : undefined, facingMode: 'environment' }
       });
       streamRef.current = stream;
       videoRef.current.srcObject = stream;
@@ -59,87 +54,68 @@ export default function BarkodScanner({ onResult, onClose }: any) {
   };
 
   return (
-    <div style={{ width: '100%', maxWidth: '420px', margin: '0 auto', background: '#000', borderRadius: '20px', overflow: 'hidden' }}>
+    <div style={{ width: '100%', maxWidth: '400px', margin: '0 auto', background: '#111', borderRadius: '16px', overflow: 'hidden', padding: '10px' }}>
       
-      {/* PRO KAMERA KONTEYNERI */}
-      <div style={{ position: 'relative', width: '100%', aspectRatio: '1.2', background: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      {/* 1 NOLU ALAN: KAMERA VE ÇERÇEVE TAM UYUMLU */}
+      <div style={{ position: 'relative', width: '100%', aspectRatio: '1.4', background: '#000', borderRadius: '12px', border: '1px solid #333', overflow: 'hidden' }}>
         
-        {/* VIDEO - Çerçevenin tam içine sığacak şekilde */}
+        {/* VIDEO (Sadece çerçevenin içinde) */}
         <video 
           ref={videoRef} 
           autoPlay 
           playsInline 
           muted 
-          style={{ width: '92%', height: '90%', objectFit: 'cover', borderRadius: '12px' }} 
+          style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
         />
 
-        {/* BARKOD ÇERÇEVESİ (Kameraya tam oturan) */}
-        <div style={{ position: 'absolute', width: '92%', height: '90%', borderRadius: '12px', pointerEvents: 'none' }}>
-          
-          {/* KÖŞE ÇİZGİLERİ - Resimdeki gibi kalın ve belirgin */}
-          <div style={{ position: 'absolute', top: 0, left: 0, width: '30px', height: '30px', borderTop: '4px solid #fff', borderLeft: '4px solid #fff', borderRadius: '12px 0 0 0' }} />
-          <div style={{ position: 'absolute', top: 0, right: 0, width: '30px', height: '30px', borderTop: '4px solid #fff', borderRight: '4px solid #fff', borderRadius: '0 12px 0 0' }} />
-          <div style={{ position: 'absolute', bottom: 0, left: 0, width: '30px', height: '30px', borderBottom: '4px solid #fff', borderLeft: '4px solid #fff', borderRadius: '0 0 0 12px' }} />
-          <div style={{ position: 'absolute', bottom: 0, right: 0, width: '30px', height: '30px', borderBottom: '4px solid #fff', borderRight: '4px solid #fff', borderRadius: '0 0 12px 0' }} />
+        {/* BARKOD ÇERÇEVESİ OVERLAY */}
+        <div style={{ position: 'absolute', inset: '0', pointerEvents: 'none' }}>
+          {/* KÖŞE ÇİZGİLERİ (BEYAZ) */}
+          <div style={{ position: 'absolute', top: '10px', left: '10px', width: '30px', height: '30px', borderTop: '4px solid #fff', borderLeft: '4px solid #fff' }} />
+          <div style={{ position: 'absolute', top: '10px', right: '10px', width: '30px', height: '30px', borderTop: '4px solid #fff', borderRight: '4px solid #fff' }} />
+          <div style={{ position: 'absolute', bottom: '10px', left: '10px', width: '30px', height: '30px', borderBottom: '4px solid #fff', borderLeft: '4px solid #fff' }} />
+          <div style={{ position: 'absolute', bottom: '10px', right: '10px', width: '30px', height: '30px', borderBottom: '4px solid #fff', borderRight: '4px solid #fff' }} />
 
-          {/* HAREKETLİ LAZER TARAYICI */}
+          {/* KIRMIZI LAZER (RESİMDEKİ GİBİ TAM ORTADA) */}
           {scanning && (
-            <div style={{
-              position: 'absolute',
-              top: '50%',
-              left: '5%',
-              right: '5%',
-              height: '2px',
-              background: 'linear-gradient(90deg, transparent, red, transparent)',
-              boxShadow: '0 0 15px 2px red',
-              animation: 'scan 2s infinite ease-in-out',
-              zIndex: 5
-            }} />
+            <div style={{ position: 'absolute', top: '50%', left: '10%', right: '10%', height: '2px', background: 'red', boxShadow: '0 0 10px red', opacity: 0.8 }} />
           )}
         </div>
 
-        {/* PRO TRANSPARAN İKON (4 NOLU ALAN) */}
+        {/* 4 NOLU ALAN: RESİMDEKİ İKONUN AYNISI (TRANSPARAN BEYAZ DAİRE + SİYAH İKON) */}
         <button
           onClick={scanning ? stop : start}
           style={{
             position: 'absolute',
-            top: '25px',
-            right: '25px',
-            width: '42px',
-            height: '42px',
+            top: '20px',
+            right: '20px',
+            width: '40px',
+            height: '40px',
             borderRadius: '50%',
-            background: 'rgba(255, 255, 255, 0.25)', // Transparan beyaz
-            backdropFilter: 'blur(8px)', // Cam efekti
-            border: '1px solid rgba(255, 255, 255, 0.3)',
+            background: 'rgba(255, 255, 255, 0.8)', // Hafif transparan beyaz
+            border: 'none',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             cursor: 'pointer',
             zIndex: 10,
-            transition: 'all 0.3s ease'
+            boxShadow: '0 2px 8px rgba(0,0,0,0.4)'
           }}
         >
-          <span className="material-icons" style={{ color: '#fff', fontSize: '22px', textShadow: '0 1px 3px rgba(0,0,0,0.3)' }}>
+          {/* FOTOĞRAF MAKİNESİ İKONU (SİYAH) */}
+          <span className="material-icons" style={{ color: '#000', fontSize: '22px' }}>
             photo_camera
           </span>
         </button>
 
         {/* PROCESSING */}
         {processing && (
-          <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 'bold', zIndex: 20, borderRadius: '20px' }}>
-            TARANIYOR...
+          <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '14px', zIndex: 20 }}>
+            OKUNUYOR...
           </div>
         )}
       </div>
 
-      {/* Lazer Animasyon CSS */}
-      <style>{`
-        @keyframes scan {
-          0% { top: 20%; opacity: 0.2; }
-          50% { top: 80%; opacity: 1; }
-          100% { top: 20%; opacity: 0.2; }
-        }
-      `}</style>
       <link href="https://googleapis.com" rel="stylesheet" />
     </div>
   );
