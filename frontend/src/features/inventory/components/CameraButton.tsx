@@ -24,10 +24,10 @@ const CameraButton: React.FC<CameraButtonProps> = ({ scanning, start, stop }) =>
       onTouchEnd={handleRelease}
       style={{
         position: 'absolute',
-        top: '24px',
-        right: '24px',
-        width: '34px',
-        height: '34px',
+        top: '24px',    // Senin kodundaki tam konum
+        right: '24px',  // Senin kodundaki tam konum
+        width: '34px',  // Senin kodundaki tam boyut
+        height: '34px', // Senin kodundaki tam boyut
         borderRadius: '50%',
         zIndex: 30,
         display: 'flex',
@@ -35,18 +35,22 @@ const CameraButton: React.FC<CameraButtonProps> = ({ scanning, start, stop }) =>
         justifyContent: 'center',
         cursor: 'pointer',
         border: 'none',
-        background: scanning ? 'rgba(255, 0, 0, 0.6)' : 'rgba(255, 255, 255, 0.5)',
+        // Dinamik renkler ve şeffaflık
+        background: scanning ? 'rgba(255, 0, 0, 0.5)' : 'rgba(255, 255, 255, 0.5)',
         backdropFilter: 'blur(4px)',
+        // Animasyon ve basılma efekti
         transition: 'all 0.2s ease',
         transform: isPressed ? 'scale(0.85)' : 'scale(1)',
-        outline: 'none',
+        // Keskin kenar ve mobil tarayıcı düzeltmeleri
+        outline: '0',
         WebkitTapHighlightColor: 'transparent',
+        WebkitAppearance: 'none',
         boxShadow: 'none',
         touchAction: 'manipulation'
       }}
     >
       <svg 
-        width="16" 
+        width="16" // Senin kodundaki tam ikon boyutu
         height="16" 
         viewBox="0 0 24 24" 
         fill={scanning ? '#fff' : 'rgba(0, 0, 0, 0.7)'}
