@@ -9,9 +9,14 @@ export default function BarcodeScanner({ onResult }: any) {
   const [processing, setProcessing] = useState(false);
 
   useEffect(() => {
+    // ZXing Kütüphanesini dinamik olarak yükle (Build hatalarını önlemek için)
     const loadScanner = async () => {
-      const { BrowserMultiFormatReader } = await import('@zxing/library');
-      readerRef.current = new BrowserMultiFormatReader();
+      try {
+        const { BrowserMultiFormatReader } = await import('@zxing/library');
+        readerRef.current = new BrowserMultiFormatReader();
+      } catch (err) {
+        console.error("Scanner yüklenemedi:", err);
+      }
     };
     loadScanner();
 
@@ -27,18 +32,20 @@ export default function BarcodeScanner({ onResult }: any) {
       setProcessing(false);
 
       await readerRef.current.decodeFromVideoDevice(
-        undefined,
+        undefined, // Varsayılan arka kamera
         videoRef.current,
         (result: any) => {
           if (result && !processing) {
             setProcessing(true);
             if (navigator.vibrate) navigator.vibrate(100);
             onResult(result.getText());
+            // Okuma sonrası 2 saniye bekleme (Çoklu okumayı önlemek için)
             setTimeout(() => setProcessing(false), 2000);
           }
         }
       );
     } catch (err) {
+      console.error("Kamera başlatılamadı:", err);
       setScanning(false);
     }
   };
@@ -50,12 +57,12 @@ export default function BarcodeScanner({ onResult }: any) {
 
   return (
     <div style={{ width: '100%', maxWidth: '400px', margin: '0 auto' }}>
-      {/* Animasyon için Style Tag ekliyoruz */}
+      {/* Lazerin yukarı-aşağı hareketi için CSS animasyonu */}
       <style>{`
         @keyframes scanMove {
-          0% { top: 20%; }
-          50% { top: 80%; }
-          100% { top: 20%; }
+          0% { top: 15%; }
+          50% { top: 85%; }
+          100% { top: 15%; }
         }
       `}</style>
 
@@ -64,54 +71,64 @@ export default function BarcodeScanner({ onResult }: any) {
         width: '100%', 
         aspectRatio: '1.4', 
         background: '#000', 
-        borderRadius: '12px',
-        border: '1px solid rgba(255,255,255,0.15)',
-        overflow: 'hidden'
+        borderRadius: '16px',
+        border: '1px solid rgba(255,255,255,0.1)',
+        overflow: 'hidden',
+        boxShadow: '0 10px 30px rgba(0,0,0,0.5)'
       }}>
-        {/* KAMERA ALANI */}
-        <video ref={videoRef} playsInline style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+        {/* KAMERA GÖRÜNTÜSÜ */}
+        <video 
+          ref={videoRef} 
+          playsInline 
+          style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+        />
 
-        {/* PRO ÇERÇEVE */}
-        <div style={{ position: 'absolute', top: '2px', left: '2px', width: '25px', height: '25px', borderTop: '4px solid #fff', borderLeft: '4px solid #fff', borderRadius: '4px 0 0 0' }} />
-        <div style={{ position: 'absolute', top: '2px', right: '2px', width: '25px', height: '25px', borderTop: '4px solid #fff', borderRight: '4px solid #fff', borderRadius: '0 4px 0 0' }} />
-        <div style={{ position: 'absolute', bottom: '2px', left: '2px', width: '25px', height: '25px', borderBottom: '4px solid #fff', borderLeft: '4px solid #fff', borderRadius: '0 0 0 4px' }} />
-        <div style={{ position: 'absolute', bottom: '2px', right: '2px', width: '25px', height: '25px', borderBottom: '4px solid #fff', borderRight: '4px solid #fff', borderRadius: '0 0 4px 0' }} />
+        {/* KÖŞE ÇERÇEVELERİ (PRO GÖRÜNÜM) */}
+        <div style={{ position: 'absolute', top: '10px', left: '10px', width: '20px', height: '20px', borderTop: '3px solid #fff', borderLeft: '3px solid #fff', borderRadius: '4px 0 0 0' }} />
+        <div style={{ position: 'absolute', top: '10px', right: '10px', width: '20px', height: '20px', borderTop: '3px solid #fff', borderRight: '3px solid #fff', borderRadius: '0 4px 0 0' }} />
+        <div style={{ position: 'absolute', bottom: '10px', left: '10px', width: '20px', height: '20px', borderBottom: '3px solid #fff', borderLeft: '3px solid #fff', borderRadius: '0 0 0 4px' }} />
+        <div style={{ position: 'absolute', bottom: '10px', right: '10px', width: '20px', height: '20px', borderBottom: '3px solid #fff', borderRight: '3px solid #fff', borderRadius: '0 0 4px 0' }} />
 
-        {/* HAREKETLİ LAZER ÇİZGİSİ (Resimdeki efektle birebir) */}
+        {/* İNCELTİLMİŞ VE TRANSPARAN HAREKETLİ LAZER */}
         {scanning && !processing && (
           <div style={{ 
             position: 'absolute', 
-            left: '8%', 
-            right: '8%', 
-            height: '3px', 
-            background: '#ff4d4d', 
-            boxShadow: '0 0 15px 3px #ff0000, 0 0 5px 1px #ffffff80',
+            left: '10%', 
+            right: '10%', 
+            height: '1.5px', // Yarı yarıya inceltildi
+            background: 'rgba(255, 0, 0, 0.4)', // Transparan kırmızı
+            boxShadow: '0 0 10px 1px rgba(255, 0, 0, 0.4), 0 0 4px 0px rgba(255, 255, 255, 0.2)', // Yumuşak parlama
             zIndex: 10,
-            animation: 'scanMove 2.5s ease-in-out infinite' // Yukarı-aşağı hareket
+            animation: 'scanMove 3s ease-in-out infinite' // Yukarı-aşağı akıcı hareket
           }} />
         )}
 
-        {/* ŞEFFAF İŞLENİYOR EKRANI */}
+        {/* İŞLENİYOR EKRANI (BLUR EFEKTLİ) */}
         {processing && (
           <div style={{ 
-            position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.4)', 
-            display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(2px)', zIndex: 20 
+            position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)', 
+            display: 'flex', alignItems: 'center', justifyContent: 'center', 
+            backdropFilter: 'blur(4px)', zIndex: 20 
           }}>
-            <span style={{ color: '#fff', fontSize: '14px', fontWeight: '600', letterSpacing: '1px' }}>İŞLENİYOR...</span>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
+              <span style={{ color: '#fff', fontSize: '14px', fontWeight: '500', letterSpacing: '2px' }}>İŞLENİYOR</span>
+              <div style={{ width: '40px', height: '2px', background: '#ff0000' }}></div>
+            </div>
           </div>
         )}
 
-        {/* KAMERA AÇMA/KAPAMA BUTONU */}
+        {/* KAMERA BUTONU */}
         {!processing && (
           <button
             onClick={scanning ? stop : start}
             style={{
-              position: 'absolute', top: '15px', right: '15px', width: '38px', height: '38px', 
-              borderRadius: '50%', background: 'rgba(255, 255, 255, 0.8)', border: 'none', 
-              display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', zIndex: 30
+              position: 'absolute', top: '15px', right: '15px', width: '40px', height: '40px', 
+              borderRadius: '50%', background: 'rgba(255, 255, 255, 0.7)', border: 'none', 
+              display: 'flex', alignItems: 'center', justifyContent: 'center', 
+              cursor: 'pointer', zIndex: 30, transition: 'all 0.2s'
             }}
           >
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="black">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="black">
               <path d="M9 2L7.17 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2h-3.17L15 2H9zm3 15c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5z"/>
             </svg>
           </button>
