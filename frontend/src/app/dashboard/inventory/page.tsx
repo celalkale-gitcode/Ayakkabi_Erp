@@ -7,7 +7,7 @@ import BarkodScanner from '@/features/inventory/components/BarcodeScanner';
 import ScanHistoryList from '@/features/inventory/components/ScanHistoryList';
 import ManualProductModal from '@/features/inventory/components/ManualProductModal';
 import CameraButton from '@/features/inventory/components/CameraButton';
-import TabMenu, { TabType } from './TabMenu'; // Güncellenen TabMenu bileşeni import edildi
+import TabMenu, { TabType } from '@/features/inventory/components/TabMenu'; // Güncellenen TabMenu bileşeni import edildi
 
 // Zustand Store ve API Servis Katmanları
 import { useInventoryStore } from '@/features/inventory/store/useInventoryStore';
