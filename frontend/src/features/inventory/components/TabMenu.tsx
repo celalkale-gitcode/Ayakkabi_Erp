@@ -2,7 +2,6 @@
 
 import React from 'react';
 
-// Sekme seçeneklerini tip güvenliği için sabitliyoruz
 export type TabType = 'scan' | 'detail' | 'quantity';
 
 interface TabMenuProps {
@@ -12,50 +11,50 @@ interface TabMenuProps {
 
 export default function TabMenu({ activeTab, setActiveTab }: TabMenuProps) {
   return (
-    <div className="w-full bg-[#1e293b] border-b border-slate-700/50">
-      <div className="flex justify-around items-center h-12 px-2">
-        
-        {/* 1. Barkod Tara Sekmesi */}
+    <div className="w-full bg-[#1a1a1a] border-y border-[#2d2d2d] shrink-0">
+      <div className="flex justify-around items-center h-11 max-w-md mx-auto">
+        {/* Barkod Tara */}
         <button
+          type="button"
           onClick={() => setActiveTab('scan')}
-          className={`flex-1 text-center py-3 text-sm font-bold transition-all relative ${
-            activeTab === 'scan' ? 'text-white' : 'text-slate-400'
+          className={`flex-1 text-center py-2.5 text-xs font-black tracking-wider uppercase transition-all relative ${
+            activeTab === 'scan' ? 'text-white' : 'text-gray-500'
           }`}
         >
           Barkod Tara
           {activeTab === 'scan' && (
-            <div className="absolute bottom-0 left-1/4 right-1/4 h-[3px] bg-white rounded-t-full" />
+            <div className="absolute bottom-0 left-4 right-4 h-[2px] bg-white rounded-t-full shadow-[0_-2px_6px_rgba(255,255,255,0.4)]" />
           )}
         </button>
 
-        {/* 2. Ürün Detayı Sekmesi */}
+        {/* Ürün Detayı */}
         <button
+          type="button"
           onClick={() => setActiveTab('detail')}
-          className={`flex-1 text-center py-3 text-sm font-bold transition-all relative ${
-            activeTab === 'detail' ? 'text-white' : 'text-slate-400'
+          className={`flex-1 text-center py-2.5 text-xs font-black tracking-wider uppercase transition-all relative ${
+            activeTab === 'detail' ? 'text-white' : 'text-gray-500'
           }`}
         >
           Ürün Detayı
           {activeTab === 'detail' && (
-            <div className="absolute bottom-0 left-1/4 right-1/4 h-[3px] bg-white rounded-t-full" />
+            <div className="absolute bottom-0 left-4 right-4 h-[2px] bg-white rounded-t-full shadow-[0_-2px_6px_rgba(255,255,255,0.4)]" />
           )}
         </button>
 
-        {/* 3. Adet Giriniz Sekmesi */}
+        {/* Adet Giriniz */}
         <button
+          type="button"
           onClick={() => setActiveTab('quantity')}
-          className={`flex-1 text-center py-3 text-sm font-bold transition-all relative ${
+          className={`flex-1 text-center py-3.5 text-xs font-black tracking-wider uppercase transition-all relative ${
             activeTab === 'quantity' ? 'text-white' : 'text-slate-400'
           }`}
         >
           Adet Giriniz
           {activeTab === 'quantity' && (
-            <div className="absolute bottom-0 left-1/4 right-1/4 h-[3px] bg-white rounded-t-full" />
+            <div className="absolute bottom-0 left-4 right-4 h-[2px] bg-white rounded-t-full shadow-[0_-2px_6px_rgba(255,255,255,0.4)]" />
           )}
         </button>
-
       </div>
     </div>
   );
 }
-
