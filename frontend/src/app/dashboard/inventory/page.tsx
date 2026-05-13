@@ -39,6 +39,11 @@ export default function InventoryPage() {
 
   const { scannedItems, addScannedItem } = useInventoryStore();
 
+  // SCANNER CONTROL
+  const startScanner = () => setScannerOpen(true);
+  const stopScanner = () => setScannerOpen(false);
+
+  // BARKOD OKUNDU
   const handleBarcode = async (code: string) => {
     setBarcode(code);
 
@@ -59,11 +64,13 @@ export default function InventoryPage() {
         let resolvedStock =
           typeof data.yeniStok === 'number' ? data.yeniStok : 42;
 
-        let productName = data.modelAdi || 'LED PANEL - 24W (PHILIPS)';
+        let productName =
+          data.modelAdi || 'LED PANEL - 24W (PHILIPS)';
 
         if (data.varyantlar) {
           const targetVariant = data.varyantlar.find((v: any) =>
-            v.barkodlar?.some((b: any) => b.barkod === code) || v.sku === code
+            v.barkodlar?.some((b: any) => b.barkod === code) ||
+            v.sku === code
           );
 
           if (targetVariant) {
@@ -82,7 +89,7 @@ export default function InventoryPage() {
 
         setQuantityInput(45);
         setActiveTab('quantity');
-        setScannerOpen(false);
+        stopScanner();
       } else {
         setShowSelectionModal(true);
       }
@@ -93,13 +100,14 @@ export default function InventoryPage() {
       ) {
         setShowSelectionModal(true);
       } else {
-        console.error('Sistem hatası:', error);
+        console.error(error);
       }
     } finally {
       setIsLoading(false);
     }
   };
 
+  // QUICK ADD
   const handleQuickAdd = async () => {
     try {
       setIsLoading(true);
@@ -130,6 +138,7 @@ export default function InventoryPage() {
     }
   };
 
+  // MANUAL FORM
   const handleManualFormSubmit = async (formData: any) => {
     try {
       setIsLoading(true);
@@ -161,6 +170,7 @@ export default function InventoryPage() {
     }
   };
 
+  // CONFIRM QUANTITY
   const handleConfirmQuantity = async () => {
     try {
       setIsLoading(true);
@@ -199,27 +209,28 @@ export default function InventoryPage() {
         <div className="flex items-center justify-between px-4 py-3">
 
           <div className="flex items-center gap-3">
-            <button className="text-xl text-gray-400">☰</button>
+            <button className="text-gray-400 text-xl">☰</button>
 
             <div>
-              <h1 className="text-[15px] font-semibold text-white">
+              <h1 className="text-[15px] font-semibold">
                 Mobil Stok Sayım
               </h1>
-              <p className="text-[11px] text-gray-500">
-                Depo: A
-              </p>
+              <p className="text-[11px] text-gray-500">Depo: A</p>
             </div>
           </div>
 
-          {/* CAMERA BUTTON - FIXED */}
+          {/* CAMERA BUTTON (FIXED) */}
           <CameraButton
-            onClick={() => setScannerOpen(!scannerOpen)}
+            scanning={scannerOpen}
+            start={startScanner}
+            stop={stopScanner}
           />
+
         </div>
       </div>
 
       {/* CONTENT */}
-      <div className="mx-auto w-full max-w-md pb-28">
+      <div className="w-full max-w-md mx-auto pb-28">
 
         {scannerOpen && (
           <div className="px-[8px] pt-[8px]">
@@ -236,18 +247,16 @@ export default function InventoryPage() {
           {/* SCAN */}
           {activeTab === 'scan' && (
             <div className="rounded-2xl border border-[#2b2b2b] bg-[#1a1a1a] p-4">
-              <p className="text-[11px] text-gray-500">
+              <p className="text-[11px] text-gray-500 uppercase">
                 Son Okunan Barkod
               </p>
 
-              <div className="mt-2 rounded-xl bg-[#111] p-3">
+              <div className="mt-2 rounded-xl border border-[#2f2f2f] bg-[#111] p-3">
                 {barcode ? (
-                  <p className="font-mono text-green-400">
-                    {barcode}
-                  </p>
+                  <p className="font-mono text-green-400">{barcode}</p>
                 ) : (
-                  <p className="text-gray-500">
-                    Barkod okutulmadı
+                  <p className="text-gray-500 text-sm">
+                    Barkod bekleniyor
                   </p>
                 )}
               </div>
@@ -256,54 +265,55 @@ export default function InventoryPage() {
 
           {/* DETAIL */}
           {activeTab === 'detail' && (
-            <div className="rounded-2xl bg-[#1a1a1a] p-4">
+            <div className="rounded-2xl border border-[#2b2b2b] bg-[#1a1a1a] p-4">
               <p>{currentProduct.name}</p>
+              <p>{currentProduct.sku}</p>
+              <p>{currentProduct.location}</p>
+              <p>{currentProduct.shelf}</p>
+              <p>{currentProduct.currentStock}</p>
             </div>
           )}
 
           {/* QUANTITY */}
           {activeTab === 'quantity' && (
-            <div className="rounded-2xl bg-[#1a1a1a] p-4 space-y-3">
-
+            <div className="rounded-2xl border border-[#2b2b2b] bg-[#1a1a1a] p-4">
               <input
                 type="number"
                 value={quantityInput}
                 onChange={(e) =>
                   setQuantityInput(Math.max(1, Number(e.target.value)))
                 }
-                className="w-full bg-black p-2"
               />
 
-              <button
-                onClick={handleConfirmQuantity}
-                className="w-full bg-green-500 py-2 text-black"
-              >
+              <button onClick={handleConfirmQuantity}>
                 ONAYLA
               </button>
-
             </div>
           )}
 
           {/* HISTORY */}
-          <ScanHistoryList items={scannedItems} />
+          <div className="rounded-2xl border border-[#2b2b2b] bg-[#1a1a1a] p-4">
+            <ScanHistoryList items={scannedItems} />
+          </div>
+
         </div>
       </div>
 
       {/* MODALS */}
+      {showSelectionModal && (
+        <div className="fixed inset-0 z-50 bg-black/80">
+          <div className="bg-[#1a1a1a] p-4">
+            <button onClick={handleQuickAdd}>Yeni Ürün</button>
+          </div>
+        </div>
+      )}
+
       {showManualModal && (
         <ManualProductModal
           barkod={barcode}
           onClose={() => setShowManualModal(false)}
           onSubmit={handleManualFormSubmit}
         />
-      )}
-
-      {showSelectionModal && (
-        <div className="fixed inset-0 bg-black/80 flex items-center justify-center">
-          <div className="bg-[#1a1a1a] p-4 rounded-xl">
-            <button onClick={handleQuickAdd}>Yeni Ürün Ekle</button>
-          </div>
-        </div>
       )}
 
     </div>
