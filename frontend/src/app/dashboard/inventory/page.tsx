@@ -7,13 +7,12 @@ import BarkodScanner from '@/features/inventory/components/BarcodeScanner';
 import ScanHistoryList from '@/features/inventory/components/ScanHistoryList';
 import ManualProductModal from '@/features/inventory/components/ManualProductModal';
 import CameraButton from '@/features/inventory/components/CameraButton';
+import TabMenu, { TabType } from './TabMenu'; // Güncellenen TabMenu bileşeni import edildi
 
 // Zustand Store ve API Servis Katmanları
 import { useInventoryStore } from '@/features/inventory/store/useInventoryStore';
 import { inventoryApi } from '@/features/inventory/services/inventoryApi';
 import { ManualProductPayload, ScannedItem } from '@/features/inventory/types/inventory.types';
-
-type TabType = 'scan' | 'detail' | 'quantity';
 
 export default function InventoryPage() {
   const [barcode, setBarcode] = useState('');
@@ -23,10 +22,10 @@ export default function InventoryPage() {
   const [lastScanned, setLastScanned] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Adet Giriş Ekranı İçin Miktar State'i
-  const [quantityInput, setQuantityInput] = useState<number>(45); // Görseldeki varsayılan örnek değer
+  // Görseldeki varsayılan miktar değeri (45)
+  const [quantityInput, setQuantityInput] = useState<number>(45);
 
-  // Görseldeki LED Panel Bilgileri Simülasyonu
+  // Görseldeki LED Panel Bilgileri
   const [currentProduct, setCurrentProduct] = useState<{
     name: string;
     location: string;
@@ -34,11 +33,11 @@ export default function InventoryPage() {
     currentStock: number;
     sku: string;
   }>({
-    name: 'LED PANEL - 24W PHILIPS',
+    name: 'LED PANEL - 24W (PHILIPS)',
     location: 'A-12-04',
     shelf: '03',
     currentStock: 42,
-    sku: 'PH-LED-24W'
+    sku: 'STK-45678'
   });
 
   // Zustand Store Bağlantısı
@@ -46,7 +45,6 @@ export default function InventoryPage() {
 
   const handleBarcode = async (code: string) => {
     setBarcode(code);
-
     if (lastScanned === code || isLoading) return;
     setLastScanned(code);
     setTimeout(() => setLastScanned(null), 2000);
@@ -54,20 +52,19 @@ export default function InventoryPage() {
     try {
       setIsLoading(true);
       const data = await inventoryApi.scanBarcode(code);
-
       if (data && data.success !== false) {
         let resolvedSku = data.sku || code;
         let resolvedStock = typeof data.yeniStok === 'number' ? data.yeniStok : 42;
-        let productName = data.modelAdi || 'LED PANEL - 24W PHILIPS';
+        let productName = data.modelAdi || 'LED PANEL - 24W (PHILIPS)';
 
         if (data.varyantlar) {
-          const targetVariant = data.varyantlar.find((v: any) => 
+          const targetVariant = data.varyantlar.find((v: any) =>
             v.barkodlar?.some((b: any) => b.barkod === code) || v.sku === code
           );
           if (targetVariant) {
             resolvedSku = targetVariant.sku;
             resolvedStock = targetVariant.stokMiktari;
-            productName = data.modelAdi || 'LED PANEL - 24W PHILIPS';
+            productName = data.modelAdi || 'LED PANEL - 24W (PHILIPS)';
           }
         }
 
@@ -78,10 +75,8 @@ export default function InventoryPage() {
           currentStock: resolvedStock,
           sku: resolvedSku
         });
-        
-        setQuantityInput(1);
+        setQuantityInput(45); // Varsayılan görsel değeri
         setActiveTab('quantity');
-
       } else {
         setShowSelectionModal(true);
       }
@@ -108,7 +103,6 @@ export default function InventoryPage() {
         miktar: 1
       };
       const res = await inventoryApi.createManualProduct(payload);
-      
       addScannedItem({
         success: true,
         sku: res.sku || payload.sku,
@@ -135,9 +129,7 @@ export default function InventoryPage() {
         sku: formData.sku || barcode,
         miktar: Number(formData.miktar) || 1
       };
-
       const res = await inventoryApi.createManualProduct(payload);
-
       addScannedItem({
         success: true,
         sku: res.sku || payload.sku,
@@ -164,15 +156,12 @@ export default function InventoryPage() {
         sku: currentProduct.sku,
         miktar: quantityInput
       };
-
       const res = await inventoryApi.createManualProduct(payload);
-
       addScannedItem({
         success: true,
         sku: res.sku || currentProduct.sku,
         yeniStok: res.yeniStok || quantityInput
       });
-
       setBarcode('');
       setActiveTab('scan');
     } catch (err) {
@@ -183,212 +172,176 @@ export default function InventoryPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#111827] text-white flex flex-col font-sans select-none antialiased">
+    // Tüm sayfa görseldeki gibi mat, koyu antrasit/siyah [#121212] yapıldı
+    <div className="min-h-screen bg-[#121212] text-white flex flex-col font-sans select-none antialiased">
       
-      {/* 1. ÜST HEADER BAR (Görseldeki Koyu Ton) */}
-      <div className="bg-[#1f2937] border-b border-gray-800 sticky top-0 z-40">
-        <div className="px-4 py-3.5 flex justify-between items-center">
+      {/* 1. ÜST HEADER BAR (Görseldeki Koyu Ton ve İnce Alt Çizgi) */}
+      <div className="bg-[#1c1c1c] border-b border-[#2d2d2d] sticky top-0 z-40">
+        <div className="px-4 py-3 flex justify-between items-center">
           <div className="flex items-center gap-3">
-            <span className="text-xl text-gray-400 cursor-pointer hover:text-white transition">☰</span>
-            <h1 className="text-base font-bold tracking-wider text-gray-100">Mobil Stok Sayım</h1>
+            <span className="text-xl text-gray-300 cursor-pointer hover:text-white transition">☰</span>
+            <h1 className="text-sm font-medium tracking-wide text-gray-200">Mobil Stok Sayım</h1>
           </div>
-          <span className="text-[11px] bg-[#374151] border border-gray-700 px-2.5 py-1 rounded-md text-gray-300 font-bold tracking-wide">
-            DEPO: MERKEZ
+          <span className="text-[12px] text-gray-300 font-normal">
+            Depo: A
           </span>
         </div>
       </div>
 
-      {/* 2. PRO TAB MENÜ (Alt çizgili aktif mod) */}
-      <div className="w-full bg-[#1f2937] border-b border-gray-800 sticky top-[53px] z-40">
-        <div className="flex justify-around items-center h-12">
-          {/* Barkod Tara */}
-          <button
-            onClick={() => setActiveTab('scan')}
-            className={`flex-1 text-center py-3 text-xs font-black tracking-wider uppercase transition-all relative ${
-              activeTab === 'scan' ? 'text-white' : 'text-gray-500'
-            }`}
-          >
-            Barkod Tara
-            {activeTab === 'scan' && (
-              <div className="absolute bottom-0 left-6 right-6 h-[3px] bg-white rounded-t-full shadow-[0_-2px_10px_rgba(255,255,255,0.5)]" />
-            )}
-          </button>
-
-          {/* Ürün Detayı */}
-          <button
-            onClick={() => setActiveTab('detail')}
-            className={`flex-1 text-center py-3 text-xs font-black tracking-wider uppercase transition-all relative ${
-              activeTab === 'detail' ? 'text-white' : 'text-gray-500'
-            }`}
-          >
-            Ürün Detayı
-            {activeTab === 'detail' && (
-              <div className="absolute bottom-0 left-6 right-6 h-[3px] bg-white rounded-t-full shadow-[0_-2px_10px_rgba(255,255,255,0.5)]" />
-            )}
-          </button>
-
-          {/* Adet Giriniz */}
-          <button
-            onClick={() => setActiveTab('quantity')}
-            className={`flex-1 text-center py-3 text-xs font-black tracking-wider uppercase transition-all relative ${
-              activeTab === 'quantity' ? 'text-white' : 'text-gray-500'
-            }`}
-          >
-            Adet Giriniz
-            {activeTab === 'quantity' && (
-              <div className="absolute bottom-0 left-6 right-6 h-[3px] bg-white rounded-t-full shadow-[0_-2px_10px_rgba(255,255,255,0.5)]" />
-            )}
-          </button>
+      {/* Ana Mobil Çerçeve Kapsayıcısı */}
+      <div className="flex-1 w-full max-w-md mx-auto flex flex-col">
+        
+        {/* Taram Ekranı Başlığı ve Kamera Alanı */}
+        <div className="px-4 pt-3 space-y-2">
+          <h2 className="text-[12px] text-gray-400 font-normal">Sayım Ekranı</h2>
+          
+          {/* Kamera / Barkod Tarama Çerçevesi */}
+          <div className="relative w-full aspect-[16/9] bg-[#1a1a1a] rounded-md border border-[#2d2d2d] overflow-hidden flex items-center justify-center">
+            <BarkodScanner onResult={handleBarcode} />
+            {/* Görseldeki kırmızı lazer simülasyon çizgisi */}
+            <div className="absolute inset-x-0 h-[1.5px] bg-red-500 opacity-80 shadow-[0_0_8px_#ef4444]" />
+          </div>
         </div>
-      </div>
 
-      {/* 3. İÇERİK ALANI */}
-      <div className="flex-1 w-full max-w-md mx-auto px-4 py-4 space-y-4 overflow-y-auto">
+        {/* 2. PRO TAB MENÜ (Kamera alanının tam altına yerleştirildi) */}
+        <div className="mt-3">
+          <TabMenu activeTab={activeTab} setActiveTab={setActiveTab} />
+        </div>
 
-        {/* SEKME A: TARAYICI ALANI */}
-        {activeTab === 'scan' && (
-          <div className="space-y-4 animate-in fade-in duration-200">
-            <div className="w-full">
-              <BarkodScanner onResult={handleBarcode} />
-            </div>
-            <div className="bg-[#1f2937] rounded-xl border border-gray-800 p-4 shadow-xl">
-              <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">Son Okunan Barkod</p>
-              <div className="mt-2 bg-[#111827] border border-gray-800 rounded-lg p-3 flex justify-between items-center">
+        {/* 3. DİNAMİK İÇERİK ALANI */}
+        <div className="flex-1 px-4 py-3 space-y-3 overflow-y-auto">
+          
+          {/* SEKME A: BARKOD TARA AKTİF MODU İÇİN EK BİLGİ KARTLARI */}
+          {activeTab === 'scan' && (
+            <div className="bg-[#1c1c1c] rounded-md border border-[#2d2d2d] p-3 space-y-2">
+              <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">Son Okunan Barkod</p>
+              <div className="bg-[#121212] border border-[#2d2d2d] rounded p-2 flex justify-between items-center">
                 {barcode ? (
-                  <p className="text-base font-mono font-bold text-blue-400 tracking-wider break-all">{barcode}</p>
+                  <p className="text-sm font-mono text-gray-300 break-all">{barcode}</p>
                 ) : (
-                  <p className="text-gray-500 text-sm italic">Barkod okutulması bekleniyor...</p>
+                  <p className="text-gray-500 text-xs italic">Okutma bekleniyor...</p>
                 )}
-                {isLoading && (
-                  <div className="w-4 h-4 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
-                )}
+                {isLoading && <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />}
               </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {/* SEKME B: GENİŞ ÜRÜN DETAYI MODU */}
-        {activeTab === 'detail' && (
-          <div className="bg-[#1f2937] p-4 rounded-xl border border-gray-800 space-y-3 shadow-xl animate-in fade-in duration-200">
-            <h3 className="font-black text-xs uppercase tracking-widest text-blue-400 border-b border-gray-800 pb-2">Geniş Ürün Detayı</h3>
-            {currentProduct ? (
-              <div className="text-sm space-y-2.5 font-semibold text-gray-300">
+          {/* SEKME B: GENİŞ ÜRÜN DETAYI MODU */}
+          {activeTab === 'detail' && (
+            <div className="bg-[#1c1c1c] p-4 rounded-md border border-[#2d2d2d] space-y-2">
+              <h3 className="text-xs uppercase tracking-wider text-gray-400 font-bold border-b border-[#2d2d2d] pb-2">Ürün Künyesi</h3>
+              <div className="text-xs space-y-1.5 text-gray-300">
                 <p><span className="text-gray-500">Ürün Adı:</span> {currentProduct.name}</p>
                 <p><span className="text-gray-500">SKU Kodu:</span> {currentProduct.sku}</p>
                 <p><span className="text-gray-500">Mevcut Stok:</span> {currentProduct.currentStock} Adet</p>
-                <p><span className="text-gray-500">Fiziksel Konum:</span> {currentProduct.location}</p>
+                <p><span className="text-gray-500">Lokasyon:</span> {currentProduct.location}</p>
                 <p><span className="text-gray-500">Raf ID:</span> {currentProduct.shelf}</p>
               </div>
-            ) : (
-              <p className="text-gray-500 text-xs italic">Detaylar için lütfen önce bir barkod taratın.</p>
-            )}
-          </div>
-        )}
+            </div>
+          )}
 
-        {/* SEKME C: ADET GİRİŞ VE RESİMDEKİ PRO YEŞİL BUTON ALANI */}
-        {activeTab === 'quantity' && (
-          <div className="space-y-4 animate-in fade-in duration-200">
-            {/* Ürün Künyesi */}
-            <div className="bg-[#1f2937] p-4 rounded-xl border border-gray-800 shadow-xl space-y-1.5">
-              <p className="text-sm font-black tracking-wide text-gray-100">
-                ÜRÜN ADI: {currentProduct?.name}
-              </p>
-              <div className="flex gap-4 text-xs font-bold text-gray-400">
-                <p>Lokasyon: <span className="text-gray-200">{currentProduct?.location}</span></p>
-                <p>Raf No: <span className="text-gray-200">{currentProduct?.shelf}</span></p>
+          {/* SEKME C VEYA GENEL GÖRÜNÜM: ÜRÜN BİLGİLERİ VE MİKTAR PANELİ */}
+          {/* Görselde sekmelerin altında direkt bu panel açık olduğu için activeTab koşulundan bağımsız veya quantity sekmesinde gösterilebilir */}
+          {activeTab === 'quantity' && (
+            <div className="space-y-3">
+              {/* Ürün Künyesi Kartı */}
+              <div className="bg-[#1c1c1c] p-3 rounded-md border border-[#2d2d2d] space-y-1 text-left">
+                <p className="text-[13px] font-medium text-gray-200">
+                  ÜRÜN ADI: {currentProduct?.name}
+                </p>
+                <p className="text-[12px] text-gray-400">
+                  Lokasyon: {currentProduct?.location}
+                </p>
+                <p className="text-[12px] text-gray-400">
+                  Raf: {currentProduct?.shelf}
+                </p>
+              </div>
+
+              {/* Sayım Miktar Paneli */}
+              <div className="bg-[#1c1c1c] p-3 rounded-md border border-[#2d2d2d] space-y-3">
+                <p className="text-[12px] text-gray-300">
+                  Mevcut: {currentProduct?.currentStock} Adet
+                </p>
+
+                {/* Dev Miktar Giriş Kutusu */}
+                <div className="flex items-center justify-between bg-[#121212] border border-[#2d2d2d] rounded-md px-3 py-1.5">
+                  <span className="text-[12px] text-gray-400">Miktar Girin:</span>
+                  <input
+                    type="number"
+                    value={quantityInput}
+                    onChange={(e) => setQuantityInput(Math.max(1, Number(e.target.value)))}
+                    className="w-24 bg-transparent text-right text-base font-normal text-white focus:outline-none"
+                  />
+                </div>
+
+                {/* +1, +10, Sil Buton Takımı */}
+                <div className="grid grid-cols-3 gap-2">
+                  <button
+                    onClick={() => setQuantityInput((prev) => prev + 1)}
+                    className="bg-[#2a2a2a] hover:bg-[#333333] py-2.5 rounded text-xs text-gray-200 border border-[#3d3d3d] transition-colors"
+                  >
+                    +1
+                  </button>
+                  <button
+                    onClick={() => setQuantityInput((prev) => prev + 10)}
+                    className="bg-[#2a2a2a] hover:bg-[#333333] py-2.5 rounded text-xs text-gray-200 border border-[#3d3d3d] transition-colors"
+                  >
+                    +10
+                  </button>
+                  <button
+                    onClick={() => setQuantityInput(1)}
+                    className="bg-[#2a2a2a] hover:bg-[#333333] py-2.5 rounded text-xs text-gray-400 border border-[#3d3d3d] transition-colors"
+                  >
+                    Sil
+                  </button>
+                </div>
+
+                {/* GÖRSELDEKİ CANLI YEŞİL ONAYLA BUTONU */}
+                <button
+                  onClick={handleConfirmQuantity}
+                  disabled={isLoading}
+                  className="w-full bg-[#22c55e] hover:bg-[#16a34a] disabled:opacity-40 py-3 rounded-md font-medium text-xs tracking-wider uppercase transition-colors text-white"
+                >
+                  {isLoading ? 'İŞLENİYOR...' : 'ONAYLA'}
+                </button>
               </div>
             </div>
+          )}
 
-            {/* Sayım Miktar Paneli */}
-            <div className="bg-[#1f2937] p-4 rounded-xl border border-gray-800 shadow-xl space-y-4">
-              <p className="text-xs font-extrabold tracking-widest text-gray-400 uppercase">
-                Mevcut Miktar: <span className="text-emerald-400 font-black text-sm ml-1">{currentProduct?.currentStock} Adet</span>
-              </p>
-              
-              {/* Dev Miktar Giriş Kutusu */}
-              <div className="relative flex items-center bg-[#111827] border border-gray-800 rounded-xl overflow-hidden focus-within:border-gray-700 transition">
-                <input
-                  type="number"
-                  value={quantityInput}
-                  onChange={(e) => setQuantityInput(Math.max(1, Number(e.target.value)))}
-                  className="w-full bg-transparent py-4 text-center text-3xl font-black text-white focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                />
-                <span className="absolute right-4 text-xs font-black text-gray-500 tracking-wider pointer-events-none uppercase">ADET</span>
-              </div>
-
-              {/* +1, +10, Sil Buton Takımı */}
-              <div className="grid grid-cols-3 gap-2.5">
-                <button
-                  onClick={() => setQuantityInput((prev) => prev + 1)}
-                  className="bg-[#374151] hover:bg-[#4b5563] active:scale-95 py-3 rounded-xl font-black text-xs uppercase tracking-wider text-gray-200 border border-gray-700/50 transition-all duration-150 shadow-md"
-                >
-                  +1
-                </button>
-                <button
-                  onClick={() => setQuantityInput((prev) => prev + 10)}
-                  className="bg-[#374151] hover:bg-[#4b5563] active:scale-95 py-3 rounded-xl font-black text-xs uppercase tracking-wider text-gray-200 border border-gray-700/50 transition-all duration-150 shadow-md"
-                >
-                  +10
-                </button>
-                <button
-                  onClick={() => setQuantityInput(1)}
-                  className="bg-[#4b5563]/40 hover:bg-[#4b5563]/60 active:scale-95 py-3 rounded-xl font-black text-xs uppercase tracking-wider text-gray-400 border border-gray-700/30 transition-all duration-150"
-                >
-                  Sil
-                </button>
-              </div>
-
-              {/* RESİMDEKİ RESMİ, PRO, CANLI YEŞİL ONAYLA BUTONU */}
-              <button
-                onClick={handleConfirmQuantity}
-                disabled={isLoading}
-                className="w-full bg-[#10b981] hover:bg-[#059669] disabled:opacity-40 active:scale-[0.97] py-4 rounded-xl font-black text-sm tracking-widest uppercase transition-all duration-150 text-white border border-[#10b981]/20 shadow-lg shadow-emerald-950/40"
-              >
-                {isLoading ? 'İŞLENİYOR...' : 'ONAYLA'}
-              </button>
+          {/* REZERV GEÇMİŞ TABLOSU (Sayfa altında minimal liste) */}
+          <div className="bg-[#1c1c1c] rounded-md border border-[#2d2d2d] p-3">
+            <div className="flex justify-between items-center mb-2">
+              <h2 className="text-[11px] font-bold uppercase tracking-wider text-gray-500">Son Tarananlar</h2>
+              <span className="text-[10px] bg-gray-800 text-gray-400 px-2 py-0.5 rounded border border-gray-700">
+                TOPLAM: {scannedItems.length}
+              </span>
+            </div>
+            <div className="max-h-24 overflow-y-auto">
+              <ScanHistoryList items={scannedItems} />
             </div>
           </div>
-        )}
 
-        {/* REZERV LİSTE: GEÇMİŞ TABLOSU */}
-        <div className="bg-[#1f2937] rounded-xl border border-gray-800 p-4 shadow-xl">
-          <div className="flex justify-between items-center mb-3">
-            <h2 className="text-xs font-black uppercase tracking-widest text-gray-400">Son Tarananlar</h2>
-            <span className="text-[10px] bg-blue-500/10 text-blue-400 px-2.5 py-0.5 rounded-md font-black border border-blue-500/20 tracking-wider">
-              TOPLAM: {scannedItems.length}
-            </span>
-          </div>
-          <div className="max-h-40 overflow-y-auto rounded-lg">
-            <ScanHistoryList items={scannedItems} />
-          </div>
         </div>
       </div>
 
-      {/* 3 SEÇENEKLİ SEÇİM MODAL MENÜSÜ */}
+      {/* ÜRÜN BULUNAMADI MODALİ */}
       {showSelectionModal && (
-        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-[#1f2937] border border-gray-800 w-full max-w-sm rounded-2xl shadow-2xl p-5 space-y-4 animate-in fade-in zoom-in-95 duration-200">
-            <div className="text-center">
-              <div className="w-12 h-12 bg-amber-500/10 text-amber-400 rounded-full flex items-center justify-center mx-auto mb-2 border border-amber-500/20">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                  <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
-                  <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
-                </svg>
-              </div>
-              <h3 className="text-base font-black text-white uppercase tracking-wide">Ürün Bulunamadı</h3>
-              <p className="text-xs text-gray-400 mt-1 break-all">
-                <span className="font-mono font-bold text-gray-300">{barcode}</span> barkodu sistemde kayıtlı değil.
+        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
+          <div className="bg-[#1c1c1c] border border-[#2d2d2d] w-full max-w-sm rounded-md p-4 space-y-3">
+            <div className="text-center space-y-1">
+              <h3 className="text-sm font-bold text-white uppercase">Ürün Bulunamadı</h3>
+              <p className="text-xs text-gray-400 break-all">
+                <span className="font-mono text-gray-300">{barcode}</span> barkodu kayıtlı değil.
               </p>
             </div>
-
-            <div className="flex flex-col gap-2 pt-2">
-              <button onClick={handleQuickAdd} className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold text-sm transition-all active:scale-95 shadow-lg shadow-blue-900/20">
+            <div className="flex flex-col gap-2">
+              <button onClick={handleQuickAdd} className="w-full bg-blue-600 text-white py-2 rounded text-xs font-medium">
                 1. Yeni Ürün Ekle
               </button>
-              <button onClick={() => { setShowSelectionModal(false); setActiveTab('scan'); }} className="w-full bg-gray-800 text-gray-300 py-3 rounded-xl font-bold text-sm transition-all border border-gray-700 active:scale-95">
+              <button onClick={() => { setShowSelectionModal(false); setActiveTab('scan'); }} className="w-full bg-[#2a2a2a] text-gray-300 py-2 rounded text-xs border border-[#3d3d3d]">
                 2. Tekrar Tara
               </button>
-              <button onClick={() => { setShowSelectionModal(false); setShowManualModal(true); }} className="w-full bg-transparent text-blue-400 py-3 rounded-xl font-bold text-sm transition-all border border-blue-500/20 active:scale-95">
+              <button onClick={() => { setShowSelectionModal(false); setShowManualModal(true); }} className="w-full bg-transparent text-blue-400 py-2 rounded text-xs border border-blue-500/30">
                 3. Manuel Ekle
               </button>
             </div>
