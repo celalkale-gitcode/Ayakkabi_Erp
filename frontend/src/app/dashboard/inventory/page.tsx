@@ -22,6 +22,7 @@ import type {
 export default function InventoryPage() {
 
   const [barcode, setBarcode] = useState('');
+
   const [activeTab, setActiveTab] =
     useState<TabType>('scan');
 
@@ -58,11 +59,16 @@ export default function InventoryPage() {
   } = useInventoryStore();
 
   // BARKOD OKUNDU
-  const handleBarcode = async (code: string) => {
+  const handleBarcode = async (
+    code: string
+  ) => {
 
     setBarcode(code);
 
-    if (lastScanned === code || isLoading) {
+    if (
+      lastScanned === code ||
+      isLoading
+    ) {
       return;
     }
 
@@ -77,14 +83,21 @@ export default function InventoryPage() {
       setIsLoading(true);
 
       const data =
-        await inventoryApi.scanBarcode(code);
+        await inventoryApi.scanBarcode(
+          code
+        );
 
-      if (data && data.success !== false) {
+      if (
+        data &&
+        data.success !== false
+      ) {
 
-        let resolvedSku = data.sku || code;
+        let resolvedSku =
+          data.sku || code;
 
         let resolvedStock =
-          typeof data.yeniStok === 'number'
+          typeof data.yeniStok ===
+          'number'
             ? data.yeniStok
             : 42;
 
@@ -95,15 +108,19 @@ export default function InventoryPage() {
         if (data.varyantlar) {
 
           const targetVariant =
-            data.varyantlar.find((v: any) =>
-              v.barkodlar?.some(
-                (b: any) => b.barkod === code
-              ) || v.sku === code
+            data.varyantlar.find(
+              (v: any) =>
+                v.barkodlar?.some(
+                  (b: any) =>
+                    b.barkod === code
+                ) ||
+                v.sku === code
             );
 
           if (targetVariant) {
 
-            resolvedSku = targetVariant.sku;
+            resolvedSku =
+              targetVariant.sku;
 
             resolvedStock =
               targetVariant.stokMiktari;
@@ -116,9 +133,13 @@ export default function InventoryPage() {
 
         setCurrentProduct({
           name: productName,
-          location: data.lokasyon || 'A-12-04',
-          shelf: data.raf || '03',
-          currentStock: resolvedStock,
+          location:
+            data.lokasyon ||
+            'A-12-04',
+          shelf:
+            data.raf || '03',
+          currentStock:
+            resolvedStock,
           sku: resolvedSku,
         });
 
@@ -158,46 +179,52 @@ export default function InventoryPage() {
   };
 
   // HIZLI EKLE
-  const handleQuickAdd = async () => {
+  const handleQuickAdd =
+    async () => {
 
-    try {
+      try {
 
-      setIsLoading(true);
+        setIsLoading(true);
 
-      const payload: ManualProductPayload = {
-        barkod: barcode,
-        urunAdi: 'Hızlı Eklenen Ürün',
-        renk: 'Standart',
-        beden: 'Standart',
-        sku: 'SKU-' + barcode,
-        miktar: 1,
-      };
+        const payload: ManualProductPayload =
+          {
+            barkod: barcode,
+            urunAdi:
+              'Hızlı Eklenen Ürün',
+            renk: 'Standart',
+            beden: 'Standart',
+            sku: 'SKU-' + barcode,
+            miktar: 1,
+          };
 
-      const res =
-        await inventoryApi.createManualProduct(
-          payload
-        );
+        const res =
+          await inventoryApi.createManualProduct(
+            payload
+          );
 
-      addScannedItem({
-        success: true,
-        sku: res.sku || payload.sku,
-        yeniStok:
-          res.yeniStok || payload.miktar,
-      });
+        addScannedItem({
+          success: true,
+          sku:
+            res.sku ||
+            payload.sku,
+          yeniStok:
+            res.yeniStok ||
+            payload.miktar,
+        });
 
-      setShowSelectionModal(false);
+        setShowSelectionModal(false);
 
-      setActiveTab('scan');
+        setActiveTab('scan');
 
-    } catch (err) {
+      } catch (err) {
 
-      console.error(err);
+        console.error(err);
 
-    } finally {
+      } finally {
 
-      setIsLoading(false);
-    }
-  };
+        setIsLoading(false);
+      }
+    };
 
   // MANUEL EKLE
   const handleManualFormSubmit =
@@ -207,16 +234,25 @@ export default function InventoryPage() {
 
         setIsLoading(true);
 
-        const payload: ManualProductPayload = {
-          barkod: barcode,
-          urunAdi: formData.urunAdi,
-          marka: formData.marka,
-          renk: formData.renk,
-          beden: formData.beden,
-          sku: formData.sku || barcode,
-          miktar:
-            Number(formData.miktar) || 1,
-        };
+        const payload: ManualProductPayload =
+          {
+            barkod: barcode,
+            urunAdi:
+              formData.urunAdi,
+            marka:
+              formData.marka,
+            renk:
+              formData.renk,
+            beden:
+              formData.beden,
+            sku:
+              formData.sku ||
+              barcode,
+            miktar:
+              Number(
+                formData.miktar
+              ) || 1,
+          };
 
         const res =
           await inventoryApi.createManualProduct(
@@ -225,9 +261,12 @@ export default function InventoryPage() {
 
         addScannedItem({
           success: true,
-          sku: res.sku || payload.sku,
+          sku:
+            res.sku ||
+            payload.sku,
           yeniStok:
-            res.yeniStok || payload.miktar,
+            res.yeniStok ||
+            payload.miktar,
         });
 
         setShowManualModal(false);
@@ -245,50 +284,59 @@ export default function InventoryPage() {
     };
 
   // ONAY
-  const handleConfirmQuantity = async () => {
+  const handleConfirmQuantity =
+    async () => {
 
-    try {
+      try {
 
-      setIsLoading(true);
+        setIsLoading(true);
 
-      const payload: ManualProductPayload = {
-        barkod:
-          barcode || currentProduct.sku,
-        urunAdi: currentProduct.name,
-        renk: 'Mevcut',
-        beden: 'Mevcut',
-        sku: currentProduct.sku,
-        miktar: quantityInput,
-      };
+        const payload: ManualProductPayload =
+          {
+            barkod:
+              barcode ||
+              currentProduct.sku,
+            urunAdi:
+              currentProduct.name,
+            renk: 'Mevcut',
+            beden: 'Mevcut',
+            sku:
+              currentProduct.sku,
+            miktar:
+              quantityInput,
+          };
 
-      const res =
-        await inventoryApi.createManualProduct(
-          payload
+        const res =
+          await inventoryApi.createManualProduct(
+            payload
+          );
+
+        addScannedItem({
+          success: true,
+          sku:
+            res.sku ||
+            currentProduct.sku,
+          yeniStok:
+            res.yeniStok ||
+            quantityInput,
+        });
+
+        setBarcode('');
+
+        setActiveTab('scan');
+
+      } catch (err) {
+
+        console.error(
+          'Stok onaylanamadı:',
+          err
         );
 
-      addScannedItem({
-        success: true,
-        sku: res.sku || currentProduct.sku,
-        yeniStok:
-          res.yeniStok || quantityInput,
-      });
+      } finally {
 
-      setBarcode('');
-
-      setActiveTab('scan');
-
-    } catch (err) {
-
-      console.error(
-        'Stok onaylanamadı:',
-        err
-      );
-
-    } finally {
-
-      setIsLoading(false);
-    }
-  };
+        setIsLoading(false);
+      }
+    };
 
   return (
 
@@ -301,7 +349,7 @@ export default function InventoryPage() {
 
           <div className="flex items-center gap-3">
 
-            <button className="text-gray-400 text-xl">
+            <button className="text-xl text-gray-400">
               ☰
             </button>
 
@@ -320,37 +368,51 @@ export default function InventoryPage() {
           </div>
 
           {/* CAMERA BUTTON */}
-          <CameraButton
-            active={scannerOpen}
+          <div
             onClick={() =>
-              setScannerOpen(!scannerOpen)
+              setScannerOpen(
+                !scannerOpen
+              )
             }
-          />
+          >
+            <CameraButton />
+          </div>
 
         </div>
 
       </div>
 
       {/* CONTENT */}
-      <div className="w-full max-w-md mx-auto pb-28">
+      <div className="mx-auto w-full max-w-md pb-28">
 
         {/* SCANNER */}
         {scannerOpen && (
-          <div className="px-[8px] pt-[8px]">
 
-            <BarkodScanner
-              onResult={handleBarcode}
-            />
+          <div className="px-2 pt-2">
+
+            <div className="overflow-hidden rounded-2xl border border-[#2b2b2b]">
+
+              <BarkodScanner
+                onResult={
+                  handleBarcode
+                }
+              />
+
+            </div>
 
           </div>
         )}
 
         {/* TAB MENU */}
         <div className="mt-3">
+
           <TabMenu
             activeTab={activeTab}
-            setActiveTab={setActiveTab}
+            setActiveTab={
+              setActiveTab
+            }
           />
+
         </div>
 
         {/* BODY */}
@@ -368,7 +430,9 @@ export default function InventoryPage() {
                 </p>
 
                 {isLoading && (
+
                   <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+
                 )}
 
               </div>
@@ -397,7 +461,7 @@ export default function InventoryPage() {
           {/* DETAIL TAB */}
           {activeTab === 'detail' && (
 
-            <div className="rounded-2xl border border-[#2b2b2b] bg-[#1a1a1a] p-4 space-y-3">
+            <div className="space-y-3 rounded-2xl border border-[#2b2b2b] bg-[#1a1a1a] p-4">
 
               <h2 className="text-[12px] uppercase tracking-wider text-gray-500">
                 Ürün Detayı
@@ -441,7 +505,8 @@ export default function InventoryPage() {
           )}
 
           {/* QUANTITY TAB */}
-          {activeTab === 'quantity' && (
+          {activeTab ===
+            'quantity' && (
 
             <div className="space-y-3">
 
@@ -473,16 +538,23 @@ export default function InventoryPage() {
 
                   <input
                     type="number"
-                    value={quantityInput}
-                    onChange={(e) =>
+                    value={
+                      quantityInput
+                    }
+                    onChange={(
+                      e
+                    ) =>
                       setQuantityInput(
                         Math.max(
                           1,
-                          Number(e.target.value)
+                          Number(
+                            e.target
+                              .value
+                          )
                         )
                       )
                     }
-                    className="w-24 border-none bg-transparent text-right text-2xl font-semibold text-white outline-none"
+                    className="w-24 bg-transparent text-right text-2xl font-semibold text-white outline-none"
                   />
 
                 </div>
@@ -492,7 +564,8 @@ export default function InventoryPage() {
                   <button
                     onClick={() =>
                       setQuantityInput(
-                        quantityInput + 1
+                        quantityInput +
+                          1
                       )
                     }
                     className="rounded-xl bg-[#2b2b2b] py-3 text-sm"
@@ -503,7 +576,8 @@ export default function InventoryPage() {
                   <button
                     onClick={() =>
                       setQuantityInput(
-                        quantityInput + 10
+                        quantityInput +
+                          10
                       )
                     }
                     className="rounded-xl bg-[#2b2b2b] py-3 text-sm"
@@ -513,7 +587,9 @@ export default function InventoryPage() {
 
                   <button
                     onClick={() =>
-                      setQuantityInput(1)
+                      setQuantityInput(
+                        1
+                      )
                     }
                     className="rounded-xl bg-[#2b2b2b] py-3 text-sm"
                   >
@@ -523,8 +599,12 @@ export default function InventoryPage() {
                 </div>
 
                 <button
-                  onClick={handleConfirmQuantity}
-                  disabled={isLoading}
+                  onClick={
+                    handleConfirmQuantity
+                  }
+                  disabled={
+                    isLoading
+                  }
                   className="mt-4 w-full rounded-xl bg-green-500 py-3 text-sm font-semibold text-black disabled:opacity-40"
                 >
                   {isLoading
@@ -547,13 +627,17 @@ export default function InventoryPage() {
               </h2>
 
               <span className="rounded-full bg-[#2a2a2a] px-2 py-1 text-[10px] text-gray-400">
+
                 {scannedItems.length}
+
               </span>
 
             </div>
 
             <ScanHistoryList
-              items={scannedItems}
+              items={
+                scannedItems
+              }
             />
 
           </div>
@@ -574,13 +658,17 @@ export default function InventoryPage() {
             </h3>
 
             <p className="mt-2 break-all text-center text-sm text-gray-400">
+
               {barcode}
+
             </p>
 
             <div className="mt-5 space-y-2">
 
               <button
-                onClick={handleQuickAdd}
+                onClick={
+                  handleQuickAdd
+                }
                 className="w-full rounded-xl bg-blue-600 py-3 text-sm font-medium"
               >
                 Yeni Ürün Ekle
@@ -588,8 +676,15 @@ export default function InventoryPage() {
 
               <button
                 onClick={() => {
-                  setShowSelectionModal(false);
-                  setActiveTab('scan');
+
+                  setShowSelectionModal(
+                    false
+                  );
+
+                  setActiveTab(
+                    'scan'
+                  );
+
                 }}
                 className="w-full rounded-xl border border-[#3a3a3a] bg-[#242424] py-3 text-sm text-gray-300"
               >
@@ -598,8 +693,15 @@ export default function InventoryPage() {
 
               <button
                 onClick={() => {
-                  setShowSelectionModal(false);
-                  setShowManualModal(true);
+
+                  setShowSelectionModal(
+                    false
+                  );
+
+                  setShowManualModal(
+                    true
+                  );
+
                 }}
                 className="w-full rounded-xl border border-blue-500/20 bg-transparent py-3 text-sm text-blue-400"
               >
@@ -619,10 +721,19 @@ export default function InventoryPage() {
         <ManualProductModal
           barkod={barcode}
           onClose={() => {
-            setShowManualModal(false);
-            setActiveTab('scan');
+
+            setShowManualModal(
+              false
+            );
+
+            setActiveTab(
+              'scan'
+            );
+
           }}
-          onSubmit={handleManualFormSubmit}
+          onSubmit={
+            handleManualFormSubmit
+          }
         />
 
       )}
