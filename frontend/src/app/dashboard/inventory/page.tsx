@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import '../../../globals.css'; 
 
 export default function InventoryPage() {
   const [miktar, setMiktar] = useState<string>('45');
