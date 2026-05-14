@@ -1,3 +1,5 @@
+'Ürün Detay Kartı Bileşeni';
+
 import React from 'react';
 
 interface ProductDetailProps {
