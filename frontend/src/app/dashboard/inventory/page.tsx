@@ -5,15 +5,16 @@ import styles from './inventory.module.css';
 import ProductDetailCard from '@/features/inventory/components/ProductDetailCard'; 
 import QuantityInputCard from '@/features/inventory/components/QuantityInputCard';
 import BarcodeScanner from '@/features/inventory/components/BarcodeScanner';
+import TabMenu, { TabType } from '@/features/inventory/components/TabMenu';
 
 export default function InventoryPage() {
   const [miktar, setMiktar] = useState<string>('45');
-  const [scannedSku, setScannedSku] = useState<string>('STK-45678'); // Resimdeki varsayılan SKU
+  const [scannedSku, setScannedSku] = useState<string>('STK-45678');
+  const [activeTab, setActiveTab] = useState<TabType>('scan'); // Tab durum takibi
 
   const handleBarcodeResult = (barcode: string) => {
     console.log("Okunan Barkod:", barcode);
     setScannedSku(barcode);
-    // Barkod okunduğunda backend entegrasyonu veya ürün getirme mantığı buraya gelecek
   };
 
   const handleOnayla = () => {
@@ -26,7 +27,6 @@ export default function InventoryPage() {
         {/* Üst Başlık Barı */}
         <div className="flex items-center justify-between px-4 pt-4 pb-3 bg-[#1a1a1a]">
           <div className="flex items-center gap-3">
-            {/* Resimdeki sol menü ikonu simülasyonu */}
             <div className="flex flex-col gap-[4px] w-5 cursor-pointer">
               <span className="h-[2px] bg-white w-full"></span>
               <span className="h-[2px] bg-white w-full"></span>
@@ -45,15 +45,13 @@ export default function InventoryPage() {
           <BarcodeScanner onResult={handleBarcodeResult} />
         </div>
 
-        {/* Resimdeki Sekme/Buton Etiketleri */}
-        <div className="flex justify-between px-6 py-2 text-[12px] font-medium text-zinc-400">
-          <span>Barkod Tara</span>
-          <span>Ürün Detayı</span>
-          <span>Adet Giriniz</span>
+        {/* Tab Menü Bileşeni (Görseldeki yerleşim alanına taşındı) */}
+        <div className="mb-4">
+          <TabMenu activeTab={activeTab} setActiveTab={setActiveTab} />
         </div>
 
         {/* ─── MODÜLER ALANLAR ─── */}
-        <div className="px-4 space-y-3 mt-1">
+        <div className="px-4 space-y-3">
           {/* 1 NOLU ALAN: Ürün kartı modülü */}
           <ProductDetailCard 
             urunAdi="LED PANEL - 24W (PHILIPS)" 
@@ -73,3 +71,4 @@ export default function InventoryPage() {
     </div>
   );
 }
+            
