@@ -1,1 +1,26 @@
+/* @apply direktifi Tailwind sınıflarını standart CSS içine gömer */
+.pageContainer {
+  @apply min-h-screen bg-[#000000] text-[#ffffff] font-sans antialiased select-none flex flex-col justify-between pb-8;
+}
+
+/* 1 ve 2 Nolu Alanların Ortak Zemin Stili */
+.card {
+  @apply bg-[#1c1c1e] border border-zinc-800/80 rounded-xl p-4 shadow-lg;
+}
+
+.cardTitle {
+  @apply text-[14px] font-medium tracking-wide text-zinc-100;
+}
+
+.cardValue {
+  @apply text-zinc-300 font-normal;
+}
+
+.actionButton {
+  @apply bg-[#2c2c2e] hover:bg-[#3a3a3c] active:bg-[#1c1c1e] text-zinc-200 py-3 rounded-lg text-[14px] font-medium transition-colors border border-zinc-700/30;
+}
+
+.submitButton {
+  @apply w-full bg-[#2ca86b] hover:bg-[#25935c] active:bg-[#1c7247] text-white font-medium py-3.5 rounded-xl transition-all tracking-widest text-[13px] uppercase mt-2 shadow-md shadow-emerald-950/20;
+}
 
