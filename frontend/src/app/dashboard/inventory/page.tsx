@@ -2,8 +2,8 @@
 
 import React, { useState } from 'react';
 import styles from './inventory.module.css'; // 1. Yöntem: Harici Stil Dosyası
-import ProductDetailCard from '@/components/inventory/ProductDetailCard'; // 2. Yöntem: Alt Bileşen
-import QuantityInputCard from '@/components/inventory/QuantityInputCard';
+import ProductDetailCard from '@/features/inventory/components/ProductDetailCard'; // 2. Yöntem: Alt Bileşen
+import QuantityInputCard from '@/features/inventory/components/QuantityInputCard';
 
 export default function InventoryPage() {
   const [miktar, setMiktar] = useState<string>('45');
