@@ -1,4 +1,4 @@
-'Miktar Giriş Kartı Bileşeni'
+'Miktar Giriş Kartı Bileşeni';
 
 import React from 'react';
 
