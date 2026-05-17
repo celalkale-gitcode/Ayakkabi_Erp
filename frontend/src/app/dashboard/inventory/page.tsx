@@ -14,6 +14,9 @@ export default function InventoryPage() {
   const [miktar, setMiktar] = useState<string>('1');
   const [activeTab, setActiveTab] = useState<TabType>('scan');
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  
+  // YENİ: Terminal tarafından en son okutulan ÜRÜN barkodunu hafızada tutar
+  const [lastScannedProductBarcode, setLastScannedProductBarcode] = useState<string>('');
 
   const { 
     scannedItems, 
@@ -24,20 +27,18 @@ export default function InventoryPage() {
 
   // Barkod Okunduğunda Çalışan Ana Fonksiyon
   const handleBarcodeResult = async (barcode: string) => {
-    // 1. ADIM: Eğer henüz raf konumu seçilmediyse, okutulan ilk barkodu raf barkodu kabul et
+    const cleanBarcode = barcode.trim().toUpperCase();
+
+    // 1. ADIM: Eğer henüz raf konumu seçilmediyse, okutulan ilk barkodu RAF BARKODU kabul et
     if (!activeLocation) {
       setIsLoading(true);
       try {
-        // API'den girilen raf barkodunun detayını ve check digit bilgisini çözüyoruz
-        // Eğer API henüz hazır değilse fallback olarak formatlı veriyi işletiyoruz
-        const cleanBarcode = barcode.trim().toUpperCase();
-        
+        // Not: Gerçek senaryoda burası api.getSuggestedLocation(cleanBarcode) ile beslenebilir.
         setActiveLocation({
-          id: 'konum_active_id',
+          id: 'konum_active_id', 
           konumKodu: cleanBarcode.includes('DP1') ? cleanBarcode : 'DP1-A-R12-03-02-010',
           tanimliBeden: '42',
           isFull: false,
-          // State veya yerel yönetim için check digit eklemesi (Görselleştirme için)
           checkDigit: '5' 
         });
         
@@ -50,30 +51,45 @@ export default function InventoryPage() {
       return;
     }
 
-    // 2. ADIM: Raf zaten seçiliyse, sonraki okutmalar ürün barkodudur -> Miktar ekranına pasla
-    setActiveTab('quantity');
+    // 2. ADIM: Raf zaten seçiliyse, bu okutulan barkod bir ÜRÜN BARKODUDUR.
+    setLastScannedProductBarcode(cleanBarcode); // Okunan barkodu kaydet
+    setActiveTab('quantity'); // Miktar giriş ekranını aç
   };
 
+  // Miktar onaylandığında veritabanına kaydeden fonksiyon
   const handleOnayla = async () => {
-    if (!activeLocation) return;
+    if (!activeLocation || !lastScannedProductBarcode) {
+      alert('Hata: Aktif raf veya taranmış ürün barkodu bulunamadı!');
+      return;
+    }
+
     setIsLoading(true);
     try {
       const numericQuantity = parseInt(miktar) || 1;
-      const mockSku = 'KND-102-SIYAH-42'; 
+
+      // KRİTİK DÜZELTME: Mock veri yerine taranan gerçek barkod ve aktif konum backend'e gönderiliyor
+      const response = await inventoryApi.scanBarcode(
+        lastScannedProductBarcode, // Gerçek Ürün Barkodu
+        numericQuantity,           // Girilen Adet
+        activeLocation.id          // Aktif Rafın ID'si
+      );
       
-      await inventoryApi.scanBarcode(mockSku, numericQuantity, activeLocation.id);
-      
+      // Zustand global state listesine ekle (Arayüzde anlık listelenmesi için)
       addScannedItem({
-        sku: mockSku,
-        yeniStok: 50,
+        sku: response?.sku || lastScannedProductBarcode, // Backend'den dönen SKU yoksa barkodu bas
+        yeniStok: response?.yeniStok || numericQuantity,
         miktar: numericQuantity,
-        konumKodu: activeLocation.konumKodu
+        konumKodu: activeLocation.konumKodu,
+        barkod: lastScannedProductBarcode
       });
 
+      // Temizlik ve Reset adımları
       setMiktar('1');
-      setActiveTab('scan');
+      setLastScannedProductBarcode(''); // Ürün barkodunu sıfırla (Yeni ürün için)
+      setActiveTab('scan'); // Tarama ekranına geri dön
     } catch (error: any) {
-      alert(error?.message || 'Hata oluştu.');
+      console.error('Veritabanı kayıt hatası:', error);
+      alert(error?.message || 'Ürün veritabanına işlenirken bir hata oluştu.');
     } finally {
       setIsLoading(false);
     }
@@ -83,7 +99,7 @@ export default function InventoryPage() {
     <div className={styles.pageContainer}>
       <div className="bg-[#121212] min-h-screen text-white flex flex-col">
         
-        {/* ÜST BAR (HEADER) - DEĞİŞEN ALAN */}
+        {/* HEADER */}
         <div className="flex items-center justify-between px-4 pt-4 pb-3 bg-[#1a1a1a] border-b border-zinc-800/40">
           <div className="flex items-center gap-3">
             <h1 className="text-[15px] font-bold tracking-wider uppercase text-zinc-200">
@@ -91,13 +107,12 @@ export default function InventoryPage() {
             </h1>
           </div>
           
-          {/* Dinamik Konum Kodu ve Check Digit Gösterimi */}
           {activeLocation ? (
             <div className="flex items-center gap-1">
               <span className="text-[12px] font-bold font-mono bg-zinc-900 px-2.5 py-1 rounded-l-lg border border-zinc-800 text-emerald-400 border-r-0">
                 Raf: {activeLocation.konumKodu}
               </span>
-              <span className="text-[12px] font-bold font-mono bg-zinc-800 px-2 py-1 rounded-r-lg border border-zinc-700 text-amber-400" title="Check Digit (Doğrulama Kodu)">
+              <span className="text-[12px] font-bold font-mono bg-zinc-800 px-2 py-1 rounded-r-lg border border-zinc-700 text-amber-400">
                 {(activeLocation as any).checkDigit || '0'}
               </span>
             </div>
@@ -115,7 +130,7 @@ export default function InventoryPage() {
         />
 
         <div className="flex-1 p-4 overflow-y-auto space-y-4">
-          {isLoading && <div className="text-center text-xs text-zinc-500 font-mono py-2">İçerik işleniyor...</div>}
+          {isLoading && <div className="text-center text-xs text-zinc-500 font-mono py-2 animate-pulse">Veritabanı senkronizasyonu...</div>}
 
           {activeTab === 'scan' && (
             <div className="space-y-4">
