@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../core/database/prisma.service';
 import { ProductsService } from '../products/products.service';
 import { ManualStockEntryDto } from './dto/manual-stock-entry.dto';
@@ -10,26 +10,41 @@ export class InventoryService {
     private productsService: ProductsService,
   ) {}
 
-  // 1. "Raf Doldu" Buton Tetikleyicisi
-  async markShelfAsFull(konumId: string) {
-    const konum = await this.prisma.depoKonum.findUnique({
-      where: { id: konumId },
+  /**
+   * 1. "Raf Doldu" Buton Tetikleyicisi
+   * Terminalden gelen ham konumKodu (String) değerini UUID'ye dönüştürerek işlem yapar.
+   */
+  async markShelfAsFull(konumIdOrKodu: string) {
+    const cleanKonum = konumIdOrKodu.trim().toUpperCase();
+
+    // Benzersiz konum_kodu veya id üzerinden rafı buluyoruz
+    const konum = await this.prisma.depoKonum.findFirst({
+      where: {
+        OR: [
+          { id: cleanKonum.toLowerCase().length === 36 ? cleanKonum : undefined }, // Geçerli bir UUID ise
+          { konumKodu: cleanKonum }
+        ]
+      }
     });
 
     if (!konum) {
-      throw new BadRequestException('Belirtilen raf konumu bulunamadı.');
+      throw new BadRequestException(`Belirtilen raf konumu (${cleanKonum}) bulunamadı.`);
     }
 
     return this.prisma.depoKonum.update({
-      where: { id: konumId },
+      where: { id: konum.id },
       data: { isFull: true },
     });
   }
 
-  // 2. Akıllı Yer Önerisi (Mal Kabul esnasında el terminaline gösterilecek)
+  /**
+   * 2. Akıllı Yer Önerisi (Mal Kabul esnasında el terminaline gösterilecek)
+   */
   async suggestLocationForBarcode(barkod: string) {
+    const cleanBarcode = barkod.trim().toUpperCase();
+
     const barkodKaydi = await this.prisma.urunBarkod.findUnique({
-      where: { barkod },
+      where: { barkod: cleanBarcode },
       include: { varyant: true },
     });
 
@@ -49,11 +64,12 @@ export class InventoryService {
         tanimliBeden: beden,
         isFull: false,
       },
+      orderBy: { kayitTarihi: 'asc' }, // İlk açılan/en eski rafa yönlendir
     });
 
     if (!uygunKonum) {
       throw new BadRequestException(
-        `Depoda ${beden} numara için uygun veya boş bir raf alanı kalmadı!`,
+        `Depoda ${beden} numara için uygun veya kilitlenmemiş boş bir raf alanı kalmadı!`,
       );
     }
 
@@ -66,10 +82,18 @@ export class InventoryService {
     };
   }
 
-  // 3. Barkod Okutma ve Rafa Miktar Bazlı Yerleştirme
-  async processScan(barkod: string, miktar: number, konumId: string) {
+  /**
+   * 3. Barkod Okutma ve Rafa Miktar Bazlı Yerleştirme (HAYATİ METOT)
+   * `konumIdOrKodu` parametresi terminalden string gelse bile veritabanını patlatmaz.
+   */
+  async processScan(barkod: string, miktar: number, konumIdOrKodu: string) {
+    const cleanBarcode = barkod.trim().toUpperCase();
+    const cleanKonum = konumIdOrKodu.trim().toUpperCase();
+    const numericQuantity = parseInt(miktar.toString(), 10) || 1;
+
+    // A- Ürün barkodunu doğrula
     const barkodKaydi = await this.prisma.urunBarkod.findUnique({
-      where: { barkod },
+      where: { barkod: cleanBarcode },
       include: { varyant: true },
     });
 
@@ -78,55 +102,62 @@ export class InventoryService {
         success: false,
         code: 'PRODUCT_NOT_FOUND',
         message: 'Barkod sistemde kayıtlı değil.',
-        barkod,
+        barkod: cleanBarcode,
       };
     }
 
-    // Hedef rafın kural kontrolü (Beden uyuyor mu ve dolu mu?)
-    const hedefKonum = await this.prisma.depoKonum.findUnique({
-      where: { id: konumId },
+    // B- Hedef rafı akıllıca bul (UUID veya String Konum Kodu uyumluluğu)
+    const hedefKonum = await this.prisma.depoKonum.findFirst({
+      where: {
+        OR: [
+          { id: cleanKonum.toLowerCase().length === 36 ? cleanKonum : undefined },
+          { konumKodu: cleanKonum }
+        ]
+      }
     });
 
     if (!hedefKonum) {
-      throw new BadRequestException('Hedef raf konumu veritabanında bulunamadı.');
+      throw new BadRequestException(`Hedef raf konumu (${cleanKonum}) veritabanında bulunamadı.`);
     }
 
     if (hedefKonum.isFull) {
-      throw new BadRequestException('Bu raf doldu olarak işaretlenmiş, ürün yerleştirilemez!');
+      throw new BadRequestException('Bu raf "Doldu" olarak işaretlenmiş, yeni ürün yerleştirilemez!');
     }
 
+    // C- Beden Doğrulama Güvenlik Duvarı
     if (hedefKonum.tanimliBeden !== barkodKaydi.varyant.beden) {
       throw new BadRequestException(
-        `Uyumsuz Raf! Bu raf sadece ${hedefKonum.tanimliBeden} numara için ayrılmıştır.`,
+        `Uyumsuz Raf! Bu raf sadece ${hedefKonum.tanimliBeden} numara için ayrılmıştır. Okutulan Ürün: ${barkodKaydi.varyant.beden}`,
       );
     }
 
-    // Stok işlemini ve sayım kaydını transaction ile miktar bazlı köprü tabloya işliyoruz
+    // D- Veri bütünlüğü için ACID Transaction başlatıyoruz
     return this.prisma.$transaction(async (tx) => {
-      // Miktar bazlı raf_stoklari tablosu güncellemesi (Upsert)
+      // Köprü tablo güncellemesi (Upsert) - Gerçek UUID'ler kilitlendi
       const rafStokKaydi = await tx.rafStok.upsert({
         where: {
           konumId_varyantId: {
-            konumId: konumId,
+            konumId: hedefKonum.id,
             varyantId: barkodKaydi.varyantId,
           },
         },
         update: {
-          miktar: { increment: miktar },
+          miktar: { increment: numericQuantity },
         },
         create: {
-          konumId: konumId,
+          konumId: hedefKonum.id,
           varyantId: barkodKaydi.varyantId,
-          miktar: miktar,
+          miktar: numericQuantity,
         },
       });
 
-      // Sayım/Hareket kaydı oluştur
+      // GÜNCELLEME: Yeni SQL şemasındaki konumId (FK) bağını ekleyerek sayım kaydını oluşturuyoruz
       await tx.sayimKaydi.create({
         data: {
           varyantId: barkodKaydi.varyantId,
-          barkod,
-          miktar,
+          konumId: hedefKonum.id, // Son eklediğimiz ilişkisel kolon dolduruldu
+          barkod: cleanBarcode,
+          miktar: numericQuantity,
           islemTipi: 'SAYIM',
         },
       });
@@ -142,36 +173,45 @@ export class InventoryService {
     });
   }
 
-  // 4. Barkod sistemde yoksa manuel ürün oluştur ve rafa yerleştir
-  async manualStockEntry(dto: ManualStockEntryDto, konumId: string) {
-    // Önce rafın uygunluğunu doğrula
-    const hedefKonum = await this.prisma.depoKonum.findUnique({
-      where: { id: konumId },
+  /**
+   * 4. Barkod sistemde yoksa manuel ürün oluştur ve rafa yerleştir
+   */
+  async manualStockEntry(dto: ManualStockEntryDto, konumIdOrKodu: string) {
+    const cleanKonum = konumIdOrKodu.trim().toUpperCase();
+
+    // Raf doğrulaması
+    const hedefKonum = await this.prisma.depoKonum.findFirst({
+      where: {
+        OR: [
+          { id: cleanKonum.toLowerCase().length === 36 ? cleanKonum : undefined },
+          { konumKodu: cleanKonum }
+        ]
+      }
     });
 
-    if (!hedefKonum) throw new BadRequestException('Seçilen raf konumu bulunamadı.');
+    if (!hedefKonum) throw new BadRequestException(`Seçilen raf konumu (${cleanKonum}) bulunamadı.`);
     if (hedefKonum.isFull) throw new BadRequestException('Bu raf kilitli/dolu!');
     if (hedefKonum.tanimliBeden !== dto.beden) {
-      throw new BadRequestException(`Bu rafa sadece ${hedefKonum.tanimliBeden} beden girebilir.`);
+      throw new BadRequestException(`Bu rafa sadece ${hedefKonum.tanimliBeden} beden ürünler girebilir.`);
     }
 
-    // Manuel varyant oluştur (Eski productsService'iniz kullanılmaya devam ediyor)
+    // Manuel varyant/ürün oluşturma tetikleyicisi
     const varyant = await this.productsService.createManualProduct({
-      barkod: dto.barkod,
+      barkod: dto.barkod.trim().toUpperCase(),
       urunAdi: dto.urunAdi,
       marka: dto.marka,
       renk: dto.renk,
       beden: dto.beden,
-      sku: dto.sku,
+      sku: dto.sku.trim().toUpperCase(),
       miktar: dto.miktar, 
     });
 
     return this.prisma.$transaction(async (tx) => {
-      // Yeni varyantı miktar bazlı olarak ilgili rafa kaydediyoruz
+      // Yeni varyantı miktar bazlı ilgili rafa eşle
       const rafStokKaydi = await tx.rafStok.upsert({
         where: {
           konumId_varyantId: {
-            konumId: konumId,
+            konumId: hedefKonum.id,
             varyantId: varyant.id,
           },
         },
@@ -179,17 +219,18 @@ export class InventoryService {
           miktar: { increment: dto.miktar },
         },
         create: {
-          konumId: konumId,
+          konumId: hedefKonum.id,
           varyantId: varyant.id,
           miktar: dto.miktar,
         },
       });
 
-      // İlk stok hareket kaydı
+      // GÜNCELLEME: Konum bağı buraya da entegre edildi
       await tx.sayimKaydi.create({
         data: {
           varyantId: varyant.id,
-          barkod: dto.barkod,
+          konumId: hedefKonum.id,
+          barkod: dto.barkod.trim().toUpperCase(),
           miktar: dto.miktar,
           islemTipi: 'MANUEL_GIRIS',
         },
@@ -207,32 +248,33 @@ export class InventoryService {
     });
   }
 
-  // 5. Son stok hareketleri (Dokunulmadı, aynen çalışıyor)
+  /**
+   * 5. Son stok hareketleri (İlişkili konum bilgisi dahil edildi)
+   */
   async getVaryantHistory(varyantId: string) {
     return this.prisma.sayimKaydi.findMany({
-      where: {
-        varyantId,
+      where: { varyantId },
+      include: {
+        konum: true // Sayımın hangi rafta yapıldığını arayüzde görebilmek için include ettik
       },
-      orderBy: {
-        kayitTarihi: 'desc',
-      },
+      orderBy: { kayitTarihi: 'desc' },
       take: 20,
     });
   }
 
-  // 6. Genel stok özeti (Artık varyant tablosundan değil rafStok tablosundan topluyor)
+  /**
+   * 6. Genel stok özeti
+   */
   async getStockSummary() {
     const summary = await this.prisma.rafStok.aggregate({
-      _sum: {
-        miktar: true,
-      },
+      _sum: { miktar: true },
     });
 
     const toplamVaryantTipi = await this.prisma.varyant.count();
 
     return {
       toplamVaryantSayisi: toplamVaryantTipi,
-      toplamStokAdedi: summary._sum.miktar || 0, // Tüm raflardaki fiziksel ayakkabı adeti toplamı
+      toplamStokAdedi: summary._sum.miktar || 0,
     };
   }
 }
