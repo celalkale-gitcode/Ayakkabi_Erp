@@ -1,11 +1,6 @@
-import Link from "next/link";
+import { redirect } from 'next/navigation';
 
 export default function Home() {
-  return (
-    <div style={{ padding: 20 }}>
-      <h1>Ana Sayfa</h1>
-
-      <Link href="/dashboard">Dashboard'a Git</Link>
-    </div>
-  );
+  // Kullanıcı sisteme girer girmez doğrudan Dashboard karşılama paneline aktarılır
+  redirect('/dashboard'); 
 }
