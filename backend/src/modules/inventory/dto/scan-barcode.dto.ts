@@ -9,5 +9,9 @@ export class ScanBarcodeDto {
   @Min(1)
   @IsOptional()
   miktar?: number = 1;
-}
 
+  // YENİ EKLENEN ALAN
+  @IsString()
+  @IsNotEmpty()
+  konumId: string; // Ürünün okutulduğu / yerleştirildiği rafın benzersiz ID'si
+}
