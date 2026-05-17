@@ -1,22 +1,29 @@
-import type {
-  Metadata,
-} from 'next';
-
-import {
-  Inter,
-} from 'next/font/google';
-
+import type { Metadata, Viewport } from 'next';
+import { Inter } from 'next/font/google';
 import './globals.css';
 
 const inter = Inter({
   subsets: ['latin'],
 });
 
+// 1. GÜNCELLENDİ: Tüm mobil cihaz ve iOS web uygulaması ayarları modern Next.js standartına taşındı
 export const metadata: Metadata = {
   title: 'Ayakkabı Stok ERP',
+  description: 'Barkodlu Ayakkabı Stok ve Sayım Sistemi',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'black-translucent',
+    title: 'Ayakkabı ERP',
+  },
+};
 
-  description:
-    'Barkodlu Ayakkabı Stok ve Sayım Sistemi',
+// 2. YENİ: Viewport ayarları Next.js 14+ standartlarına göre ayrı bir export olarak tanımlandı
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  viewport-fit: 'cover',
+  themeColor: '#121212',
 };
 
 export default function RootLayout({
@@ -24,50 +31,18 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-
   return (
     <html
       lang="tr"
-      className="dark"
+      className="dark select-none" // El terminalinde personelin metinleri kazara seçip maviye boyamasını engeller
       suppressHydrationWarning
     >
-
       <head>
-
-        {/* MATERIAL ICONS */}
+        {/* MATERIAL ICONS (Harici fontlar veya kütüphaneler için head içi uygundur) */}
         <link
           rel="stylesheet"
           href="https://fonts.googleapis.com/icon?family=Material+Icons"
         />
-
-        {/* MOBILE VIEWPORT */}
-        <meta
-          name="viewport"
-          content="
-            width=device-width,
-            initial-scale=1,
-            maximum-scale=1,
-            viewport-fit=cover
-          "
-        />
-
-        {/* IOS WEB APP */}
-        <meta
-          name="apple-mobile-web-app-capable"
-          content="yes"
-        />
-
-        <meta
-          name="apple-mobile-web-app-status-bar-style"
-          content="black-translucent"
-        />
-
-        {/* THEME COLOR */}
-        <meta
-          name="theme-color"
-          content="#121212"
-        />
-
       </head>
 
       <body
@@ -77,24 +52,17 @@ export default function RootLayout({
           text-white
           antialiased
           overflow-x-hidden
+          overscroll-behavior-y-none 
           min-h-screen
         `}
+        /* overscroll-behavior-y-none: Sayfayı yukarı/aşağı çekerken tarayıcının yaylanmasını (bounce) engeller */
       >
-
         {/* APP WRAPPER */}
-        <div
-          className="
-            w-full
-            min-h-screen
-            bg-[#121212]
-            text-white
-          "
-        >
+        {/* h-[100dvh]: El terminalinde klavye açıldığında tasarımın yukarı doğru pörsümesini engeller */}
+        <div className="w-full min-h-[100dvh] h-full bg-[#121212] text-white flex flex-col">
           {children}
         </div>
-
       </body>
-
     </html>
   );
-}
+} 
