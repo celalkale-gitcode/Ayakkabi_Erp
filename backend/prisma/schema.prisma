@@ -20,42 +20,82 @@ model Urun {
 }
 
 model Varyant {
-  id           String         @id @default(uuid())
-  urunId       String         @map("urun_id")
-  renk         String
-  beden        String
-  sku          String         @unique
-  rafKonumu    String?        @map("raf_konumu")
-  stokMiktari  Int            @default(0) @map("stok_miktari")
-  kayitTarihi  DateTime       @default(now()) @map("kayit_tarihi")
+  id             String       @id @default(uuid())
+  urunId         String       @map("urun_id")
+  renk           String
+  beden          String
+  sku            String       @unique
+  kayitTarihi    DateTime     @default(now()) @map("kayit_tarihi")
 
-  urun           Urun           @relation(fields: [urunId], references: [id], onDelete: Cascade)
+  // İLİŞKİLER: raf_konumu ve stok_miktari alanları buradan silindi!
+  urun           Urun         @relation(fields: [urunId], references: [id], onDelete: Cascade)
   barkodlar      UrunBarkod[]
   sayimKayitlari SayimKaydi[]
+  
+  // YENİ İLİŞKİ: Bu varyantın hangi raflarda ne kadar stoğu olduğunu tutan köprü bağlantısı
+  rafStoklari    RafStok[]
 
   @@map("varyantlar")
 }
 
 model UrunBarkod {
-  id          String   @id @default(uuid())
-  varyantId   String   @map("varyant_id")
-  barkod      String   @unique
-  kayitTarihi DateTime @default(now()) @map("kayit_tarihi")
+  id          String    @id @default(uuid())
+  varyantId   String    @map("varyant_id")
+  barkod      String    @unique
+  kayitTarihi DateTime  @default(now()) @map("kayit_tarihi")
 
-  varyant     Varyant  @relation(fields: [varyantId], references: [id], onDelete: Cascade)
+  varyant     Varyant   @relation(fields: [varyantId], references: [id], onDelete: Cascade)
 
   @@map("urun_barkodlari")
 }
 
 model SayimKaydi {
-  id          String   @id @default(uuid())
-  varyantId   String   @map("varyant_id")
+  id          String    @id @default(uuid())
+  varyantId   String    @map("varyant_id")
   barkod      String
-  miktar      Int      @default(1)
-  islemTipi   String   @default("SAYIM") @map("islem_tipi")
-  kayitTarihi DateTime @default(now()) @map("kayit_tarihi")
+  miktar      Int       @default(1)
+  islemTipi   String    @default("SAYIM") @map("islem_tipi")
+  kayitTarihi DateTime  @default(now()) @map("kayit_tarihi")
 
-  varyant     Varyant  @relation(fields: [varyantId], references: [id])
+  varyant     Varyant   @relation(fields: [varyantId], references: [id])
 
   @@map("sayim_kayitlari")
+}
+
+// ==========================================
+// YENİ EKLENEN MODELLER (DEPO VE RAF MANTIĞI)
+// ==========================================
+
+model DepoKonum {
+  id           String    @id @default(uuid())
+  konumKodu    String    @unique @map("konum_kodu") // Örnek: REYON-A-SUTUN-3-KAT-2
+  depoId       String    @map("depo_id")
+  alan         String                               // Spor alan, klasik alan vb.
+  reyon        String                               // A, B, C...
+  sutun        Int
+  kat          Int
+  goz          Int
+  checkDigit   String    @map("check_digit")        // El terminali doğrulaması için barkod eki
+  tanimliBeden String    @map("tanimli_beden")      // Örnek: "42" (Bu rafa sadece 42 numara girebilir)
+  isFull       Boolean   @default(false) @map("is_full") // El terminalindeki "Raf Doldu" butonu burayı kilitler
+  kayitTarihi  DateTime  @default(now()) @map("kayit_tarihi")
+
+  rafStoklari  RafStok[]
+
+  @@map("depo_konumlar")
+}
+
+model RafStok {
+  id             String    @id @default(uuid())
+  konumId        String    @map("konum_id")
+  varyantId      String    @map("varyant_id")
+  miktar         Int       @default(0)              // Bu rafta bu varyanttan kaç adet var?
+  guncellemeMich DateTime  @updatedAt @map("guncelleme_tarihi")
+
+  konum          DepoKonum @relation(fields: [konumId], references: [id], onDelete: Cascade)
+  varyant        Varyant   @relation(fields: [varyantId], references: [id], onDelete: Cascade)
+
+  // Bir rafta aynı varyanttan sadece 1 kayıt olabilir, miktar o kaydın üstünde increment edilir.
+  @@unique([konumId, varyantId])
+  @@map("raf_stoklari")
 }
