@@ -7,7 +7,6 @@ import {
 } from 'class-validator';
 
 export class ManualStockEntryDto {
-
   @IsString()
   @IsNotEmpty()
   barkod: string;
@@ -35,4 +34,9 @@ export class ManualStockEntryDto {
   @IsInt()
   @Min(1)
   miktar: number;
+
+  // YENİ EKLENEN ALAN
+  @IsString()
+  @IsNotEmpty()
+  konumId: string; // Manuel oluşturulan ürünün ilk yerleştirileceği rafın benzersiz ID'si
 }
