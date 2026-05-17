@@ -1,21 +1,11 @@
 import { api } from '@/lib/axios';
-
-// İleride types dosyasına taşınabilir, şimdilik tip güvenliği için buraya ekledik
-export interface ProductPayload {
-  barkod: string;
-  urunAdi: string;
-  marka?: string;
-  renk: string;
-  beden: string;
-  sku: string;
-  fiyat?: number;
-}
+// GÜNCELLENDİ: İhtiyacımız olan tip kontratını merkezi dosyadan çekiyoruz
+import { Product, ProductPayload } from '../types/product.types';
 
 export const productsApi = {
   // 1. Tüm ürünleri getir
-  getAll: async () => {
+  getAll: async (): Promise<Product[]> => {
     try {
-      // axios instance otomatik olarak base URL ve 'Content-Type' ayarlarını yönetir
       const response = await api.get('/products');
       return response.data;
     } catch (error) {
@@ -25,7 +15,7 @@ export const productsApi = {
   },
 
   // 2. ID veya Barkod ile ürün getir
-  getById: async (id: string) => {
+  getById: async (id: string): Promise<Product | null> => {
     try {
       const response = await api.get(`/products/${id}`);
       return response.data;
@@ -35,8 +25,8 @@ export const productsApi = {
     }
   },
 
-  // 3. Yeni ürün oluştur (payload 'any' tipinden kurtarıldı)
-  create: async (payload: ProductPayload) => {
+  // 3. Yeni ürün oluştur
+  create: async (payload: ProductPayload): Promise<Product | null> => {
     try {
       const response = await api.post('/products', payload);
       return response.data;
