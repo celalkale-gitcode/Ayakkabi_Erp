@@ -35,7 +35,7 @@ export default function InventoryPage() {
       try {
         // Not: Gerçek senaryoda burası api.getSuggestedLocation(cleanBarcode) ile beslenebilir.
         setActiveLocation({
-          id: 'konum_active_id', 
+          id: '66d8b14d-76d1-4b68-a232-d2b5e525c8ff', 
           konumKodu: cleanBarcode.includes('DP1') ? cleanBarcode : 'DP1-A-R12-03-02-010',
           tanimliBeden: '42',
           isFull: false,
