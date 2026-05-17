@@ -8,31 +8,28 @@ datasource db {
 }
 
 model Urun {
-  id          String    @id @default(uuid())
-  modelAdi    String    @map("model_adi")
-  modelKodu   String    @unique @map("model_kodu")
-  marka       String?
-  kayitTarihi DateTime  @default(now()) @map("kayit_tarihi")
+  id           String    @id @default(uuid())
+  modelAdi     String    @map("model_adi")
+  modelKodu    String    @unique @map("model_kodu")
+  marka        String?
+  kayitTarihi  DateTime  @default(now()) @map("kayit_tarihi")
   
-  varyantlar  Varyant[]
+  varyantlar   Varyant[]
 
   @@map("urunler")
 }
 
 model Varyant {
-  id             String       @id @default(uuid())
-  urunId         String       @map("urun_id")
+  id             String        @id @default(uuid())
+  urunId         String        @map("urun_id")
   renk           String
   beden          String
-  sku            String       @unique
-  kayitTarihi    DateTime     @default(now()) @map("kayit_tarihi")
+  sku            String        @unique
+  kayitTarihi    DateTime      @default(now()) @map("kayit_tarihi")
 
-  // İLİŞKİLER: raf_konumu ve stok_miktari alanları buradan silindi!
-  urun           Urun         @relation(fields: [urunId], references: [id], onDelete: Cascade)
+  urun           Urun          @relation(fields: [urunId], references: [id], onDelete: Cascade)
   barkodlar      UrunBarkod[]
   sayimKayitlari SayimKaydi[]
-  
-  // YENİ İLİŞKİ: Bu varyantın hangi raflarda ne kadar stoğu olduğunu tutan köprü bağlantısı
   rafStoklari    RafStok[]
 
   @@map("varyantlar")
@@ -52,50 +49,48 @@ model UrunBarkod {
 model SayimKaydi {
   id          String    @id @default(uuid())
   varyantId   String    @map("varyant_id")
+  konumId     String?   @map("konum_id") // SQL'e eklediğimiz yeni konum kolonu
   barkod      String
   miktar      Int       @default(1)
   islemTipi   String    @default("SAYIM") @map("islem_tipi")
   kayitTarihi DateTime  @default(now()) @map("kayit_tarihi")
 
   varyant     Varyant   @relation(fields: [varyantId], references: [id])
+  konum       DepoKonum? @relation(fields: [konumId], references: [id], onDelete: SetNull)
 
   @@map("sayim_kayitlari")
 }
 
-// ==========================================
-// YENİ EKLENEN MODELLER (DEPO VE RAF MANTIĞI)
-// ==========================================
-
 model DepoKonum {
   id           String    @id @default(uuid())
-  konumKodu    String    @unique @map("konum_kodu") // Örnek: REYON-A-SUTUN-3-KAT-2
+  konumKodu    String    @unique @map("konum_kodu") 
   depoId       String    @map("depo_id")
-  alan         String                               // Spor alan, klasik alan vb.
-  reyon        String                               // A, B, C...
+  alan         String                               
+  reyon        String                               
   sutun        Int
   kat          Int
   goz          Int
-  checkDigit   String    @map("check_digit")        // El terminali doğrulaması için barkod eki
-  tanimliBeden String    @map("tanimli_beden")      // Örnek: "42" (Bu rafa sadece 42 numara girebilir)
-  isFull       Boolean   @default(false) @map("is_full") // El terminalindeki "Raf Doldu" butonu burayı kilitler
+  checkDigit   String    @map("check_digit")        
+  tanimliBeden String    @map("tanimli_beden")      
+  isFull       Boolean   @default(false) @map("is_full") 
   kayitTarihi  DateTime  @default(now()) @map("kayit_tarihi")
 
-  rafStoklari  RafStok[]
+  rafStoklari    RafStok[]
+  sayimKayitlari SayimKaydi[] // Konumun sayım geçmişi bağı
 
   @@map("depo_konumlar")
 }
 
 model RafStok {
-  id             String    @id @default(uuid())
-  konumId        String    @map("konum_id")
-  varyantId      String    @map("varyant_id")
-  miktar         Int       @default(0)              // Bu rafta bu varyanttan kaç adet var?
-  guncellemeMich DateTime  @updatedAt @map("guncelleme_tarihi")
+  id              String    @id @default(uuid())
+  konumId         String    @map("konum_id")
+  varyantId       String    @map("varyant_id")
+  miktar          Int       @default(0)  
+  guncellemeTarihi DateTime  @updatedAt @map("guncelleme_tarihi") 
 
-  konum          DepoKonum @relation(fields: [konumId], references: [id], onDelete: Cascade)
-  varyant        Varyant   @relation(fields: [varyantId], references: [id], onDelete: Cascade)
+  konum           DepoKonum @relation(fields: [konumId], references: [id], onDelete: Cascade)
+  varyant         Varyant   @relation(fields: [varyantId], references: [id], onDelete: Cascade)
 
-  // Bir rafta aynı varyanttan sadece 1 kayıt olabilir, miktar o kaydın üstünde increment edilir.
   @@unique([konumId, varyantId])
   @@map("raf_stoklari")
 }
