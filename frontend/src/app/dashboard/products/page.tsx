@@ -59,7 +59,7 @@ export default function ProductsPage() {
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Arama parametresi giriniz..."
+              placeholder={searchMode === 'modelAdi' ? 'Model adı veya kodu yazın...' : searchMode === 'sku' ? 'SKU girin...' : 'Barkod okutun...'}
               className="w-full bg-zinc-950 text-zinc-100 border border-zinc-800 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-zinc-600 transition font-mono placeholder-zinc-600"
             />
             {query && (
@@ -101,7 +101,7 @@ export default function ProductsPage() {
                             {variant.konumStoklari.map((ks) => (
                               <div key={ks.id} className="flex justify-between items-center bg-zinc-950 px-2 py-1 rounded border border-zinc-800/40 font-mono text-[10px]">
                                 <span className="text-zinc-400">{ks.konumKodu}</span>
-                                <span className="text-blue-400 font-bold">{ks. some miktar || ks.miktar} Çf</span>
+                                <span className="text-blue-400 font-bold">{ks.miktar} Çf</span>
                               </div>
                             ))}
                           </div>
