@@ -3,326 +3,225 @@ import {
   ConflictException,
   NotFoundException,
 } from '@nestjs/common';
-
-import { PrismaService }
-  from '../../core/database/prisma.service';
-
-import { CreateProductDto }
-  from './dto/create-product.dto';
+import { PrismaService } from '../../core/database/prisma.service';
+import { CreateProductDto } from './dto/create-product.dto';
 
 @Injectable()
 export class ProductsService {
+  constructor(private prisma: PrismaService) {}
 
-  constructor(
-    private prisma: PrismaService,
-  ) {}
-
-  // Normal ürün oluşturma
-  async createFullProduct(
-    dto: CreateProductDto,
-  ) {
-
+  // 1. Normal Ürün ve Varyant Kataloğu Oluşturma
+  async createFullProduct(dto: CreateProductDto) {
     // Model kodu kontrolü
-    const existingModel =
-      await this.prisma.urun.findUnique({
-
-        where: {
-          modelKodu:
-            dto.modelKodu,
-        },
-      });
+    const existingModel = await this.prisma.urun.findUnique({
+      where: { modelKodu: dto.modelKodu },
+    });
 
     if (existingModel) {
-
-      throw new ConflictException(
-        'Bu model kodu zaten mevcut.',
-      );
+      throw new ConflictException('Bu model kodu zaten mevcut.');
     }
 
-    // SKU duplicate kontrolü
+    // SKU ve Barkod mükerrerlik (duplicate) kontrolleri
     for (const varyant of dto.varyantlar) {
-
-      const existingSku =
-        await this.prisma.varyant.findUnique({
-
-          where: {
-            sku: varyant.sku,
-          },
-        });
+      const existingSku = await this.prisma.varyant.findUnique({
+        where: { sku: varyant.sku },
+      });
 
       if (existingSku) {
-
-        throw new ConflictException(
-          `SKU zaten mevcut: ${varyant.sku}`,
-        );
+        throw new ConflictException(`SKU zaten mevcut: ${varyant.sku}`);
       }
 
-      // Barkod duplicate kontrolü
       for (const barkod of varyant.barkodlar) {
-
-        const existingBarcode =
-          await this.prisma.urunBarkod.findUnique({
-
-            where: {
-              barkod,
-            },
-          });
+        const existingBarcode = await this.prisma.urunBarkod.findUnique({
+          where: { barkod },
+        });
 
         if (existingBarcode) {
-
-          throw new ConflictException(
-            `Barkod zaten mevcut: ${barkod}`,
-          );
+          throw new ConflictException(`Barkod zaten mevcut: ${barkod}`);
         }
       }
     }
 
-    return this.prisma.urun.create({
-
+    // Ürün kaydı (stokMiktari sütunu çıkartıldı)
+    const yeniUrun = await this.prisma.urun.create({
       data: {
-
-        modelAdi:
-          dto.modelAdi,
-
-        modelKodu:
-          dto.modelKodu,
-
-        marka:
-          dto.marka,
-
+        modelAdi: dto.modelAdi,
+        modelKodu: dto.modelKodu,
+        marka: dto.marka,
         varyantlar: {
-
-          create:
-            dto.varyantlar.map(
-              (v) => ({
-
-                renk:
-                  v.renk,
-
-                beden:
-                  v.beden,
-
-                sku:
-                  v.sku,
-
-                stokMiktari:
-                  v.stokMiktari || 0,
-
-                barkodlar: {
-
-                  create:
-                    v.barkodlar.map(
-                      (b) => ({
-                        barkod: b,
-                      }),
-                    ),
-                },
-              }),
-            ),
+          create: dto.varyantlar.map((v) => ({
+            renk: v.renk,
+            beden: v.beden,
+            sku: v.sku,
+            // GÜNCELLENDİ: stokMiktari buradan tamamen kaldırıldı.
+            barkodlar: {
+              create: v.barkodlar.map((b) => ({
+                barkod: b,
+              })),
+            },
+          })),
         },
       },
-
       include: {
-
         varyantlar: {
-
           include: {
             barkodlar: true,
+            rafStoklari: true, // Yeni miktar tablosunu dahil ediyoruz
           },
         },
       },
     });
+
+    // Frontend uyumluluğu için sanal stokMiktari ekleyerek dönüyoruz
+    return {
+      ...yeniUrun,
+      varyantlar: yeniUrun.varyantlar.map((v) => ({
+        ...v,
+        stokMiktari: 0, // Yeni açılan ürünün henüz raf stoğu yoktur
+      })),
+    };
   }
 
-  // Barkod bulunamadığında manuel ürün oluştur
+  // 2. Barkod bulunamadığında manuel ürün/varyant kartı açma
   async createManualProduct(data: {
     barkod: string;
-
     urunAdi: string;
-
     marka?: string;
-
     renk: string;
-
     beden: string;
-
     sku: string;
-
     miktar: number;
   }) {
-
     // SKU kontrolü
-    const existingSku =
-      await this.prisma.varyant.findUnique({
-
-        where: {
-          sku: data.sku,
-        },
-      });
+    const existingSku = await this.prisma.varyant.findUnique({
+      where: { sku: data.sku },
+    });
 
     if (existingSku) {
-
-      throw new ConflictException(
-        'Bu SKU zaten mevcut.',
-      );
+      throw new ConflictException('Bu SKU zaten mevcut.');
     }
 
     // Barkod kontrolü
-    const existingBarcode =
-      await this.prisma.urunBarkod.findUnique({
+    const existingBarcode = await this.prisma.urunBarkod.findUnique({
+      where: { barkod: data.barkod },
+    });
 
-        where: {
-          barkod:
-            data.barkod,
+    // Barkod sistemde zaten varsa, sadece o varyant kartını bulup geri dönüyoruz.
+    // GÜNCELLENDİ: Varyant tablosunda stok artırmak yerine, miktar lojiğini InventoryService rafa işleyecek.
+    if (existingBarcode) {
+      const mevcutVaryant = await this.prisma.varyant.findUnique({
+        where: { id: existingBarcode.varyantId },
+        include: {
+          barkodlar: true,
+          urun: true,
+          rafStoklari: true,
         },
       });
 
-    // Barkod varsa direkt varyanta stok ekle
-    if (existingBarcode) {
+      if (!mevcutVaryant) throw new NotFoundException('Varyant kaydı kırık, bulunamadı.');
 
-      const updatedVariant =
-        await this.prisma.varyant.update({
-
-          where: {
-            id:
-              existingBarcode.varyantId,
-          },
-
-          data: {
-
-            stokMiktari: {
-
-              increment:
-                data.miktar,
-            },
-          },
-        });
-
-      return updatedVariant;
+      return {
+        ...mevcutVaryant,
+        stokMiktari: mevcutVaryant.rafStoklari.reduce((sum, item) => sum + item.miktar, 0),
+      };
     }
 
-    return this.prisma.$transaction(
-      async (tx) => {
+    // Katalog kartı ilk kez oluşturuluyor (stokMiktari kaldırıldı)
+    const yeniManuelVaryant = await this.prisma.$transaction(async (tx) => {
+      const urun = await tx.urun.create({
+        data: {
+          modelAdi: data.urunAdi,
+          modelKodu: `MANUAL-${Date.now()}`,
+          marka: data.marka,
+        },
+      });
 
-        // Manuel ürün oluştur
-        const urun =
-          await tx.urun.create({
+      const varyant = await tx.varyant.create({
+        data: {
+          urunId: urun.id,
+          renk: data.renk,
+          beden: data.beden,
+          sku: data.sku,
+          // GÜNCELLENDİ: stokMiktari kaldırıldı.
+        },
+      });
 
-            data: {
+      await tx.urunBarkod.create({
+        data: {
+          varyantId: varyant.id,
+          barkod: data.barkod,
+        },
+      });
 
-              modelAdi:
-                data.urunAdi,
+      return tx.varyant.findUnique({
+        where: { id: varyant.id },
+        include: {
+          barkodlar: true,
+          urun: true,
+          rafStoklari: true,
+        },
+      });
+    });
 
-              modelKodu:
-                `MANUAL-${Date.now()}`,
+    if (!yeniManuelVaryant) throw new BadRequestException('Manuel ürün kartı oluşturulamadı.');
 
-              marka:
-                data.marka,
-            },
-          });
-
-        // Manuel varyant oluştur
-        const varyant =
-          await tx.varyant.create({
-
-            data: {
-
-              urunId:
-                urun.id,
-
-              renk:
-                data.renk,
-
-              beden:
-                data.beden,
-
-              sku:
-                data.sku,
-
-              stokMiktari:
-                data.miktar,
-            },
-          });
-
-        // Barkod oluştur
-        await tx.urunBarkod.create({
-
-          data: {
-
-            varyantId:
-              varyant.id,
-
-            barkod:
-              data.barkod,
-          },
-        });
-
-        // Son varyantı barkod ile birlikte dön
-        return tx.varyant.findUnique({
-
-          where: {
-            id:
-              varyant.id,
-          },
-
-          include: {
-            barkodlar: true,
-            urun: true,
-          },
-        });
-      },
-    );
+    return {
+      ...yeniManuelVaryant,
+      stokMiktari: 0, // Gerçek miktar InventoryService tarafından rafa yazılacak
+    };
   }
 
-  // Tüm ürünleri getir
+  // 3. Tüm ürünleri ve toplam raf stoklarını hesaplayarak getir
   async findAll() {
-
-    return this.prisma.urun.findMany({
-
+    const urunler = await this.prisma.urun.findMany({
       include: {
-
         varyantlar: {
-
           include: {
             barkodlar: true,
+            rafStoklari: true, // Raflardaki adetleri çekiyoruz
           },
         },
       },
-
       orderBy: {
         kayitTarihi: 'desc',
       },
     });
+
+    // GÜNCELLENDİ: Her varyantın tüm raflardaki stoğunu toplayıp tek bir sanal stokMiktari alanına map'liyoruz
+    return urunler.map((urun) => ({
+      ...urun,
+      varyantlar: urun.varyantlar.map((v) => ({
+        ...v,
+        stokMiktari: v.rafStoklari.reduce((sum, item) => sum + item.miktar, 0),
+      })),
+    }));
   }
 
-  // Tek ürün getir
+  // 4. Tek bir ürünü varyant toplam stoklarıyla getir
   async findById(id: string) {
-
-    const urun =
-      await this.prisma.urun.findUnique({
-
-        where: {
-          id,
-        },
-
-        include: {
-
-          varyantlar: {
-
-            include: {
-              barkodlar: true,
-            },
+    const urun = await this.prisma.urun.findUnique({
+      where: { id },
+      include: {
+        varyantlar: {
+          include: {
+            barkodlar: true,
+            rafStoklari: true,
           },
         },
-      });
+      },
+    });
 
     if (!urun) {
-
-      throw new NotFoundException(
-        'Ürün bulunamadı.',
-      );
+      throw new NotFoundException('Ürün bulunamadı.');
     }
 
-    return urun;
+    // GÜNCELLENDİ: Sanal stok hesabı ile frontend kırılmaları engellendi
+    return {
+      ...urun,
+      varyantlar: urun.varyantlar.map((v) => ({
+        ...v,
+        stokMiktari: v.rafStoklari.reduce((sum, item) => sum + item.miktar, 0),
+      })),
+    };
   }
 }
