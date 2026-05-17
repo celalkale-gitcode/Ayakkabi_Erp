@@ -1,138 +1,47 @@
-const API_URL =
-  process.env.NEXT_PUBLIC_API_URL;
+import { api } from '@/lib/axios';
 
-if (!API_URL) {
-
-  throw new Error(
-    'NEXT_PUBLIC_API_URL tanımlı değil',
-  );
+// İleride types dosyasına taşınabilir, şimdilik tip güvenliği için buraya ekledik
+export interface ProductPayload {
+  barkod: string;
+  urunAdi: string;
+  marka?: string;
+  renk: string;
+  beden: string;
+  sku: string;
+  fiyat?: number;
 }
 
 export const productsApi = {
-
-  // Tüm ürünleri getir
+  // 1. Tüm ürünleri getir
   getAll: async () => {
-
     try {
-
-      const response =
-        await fetch(
-          `${API_URL}/products`,
-          {
-            method: 'GET',
-
-            headers: {
-              'Content-Type':
-                'application/json',
-            },
-
-            // Next.js cache disable
-            cache: 'no-store',
-          },
-        );
-
-      if (!response.ok) {
-
-        throw new Error(
-          `Ürünler getirilemedi: ${response.status}`,
-        );
-      }
-
-      return await response.json();
-
+      // axios instance otomatik olarak base URL ve 'Content-Type' ayarlarını yönetir
+      const response = await api.get('/products');
+      return response.data;
     } catch (error) {
-
-      console.error(
-        'API Hatası:',
-        error,
-      );
-
+      console.error('Ürünler getirilirken API Hatası:', error);
       return [];
     }
   },
 
-  // ID ile ürün getir
-  getById: async (
-    id: string,
-  ) => {
-
+  // 2. ID veya Barkod ile ürün getir
+  getById: async (id: string) => {
     try {
-
-      const response =
-        await fetch(
-          `${API_URL}/products/${id}`,
-          {
-            method: 'GET',
-
-            headers: {
-              'Content-Type':
-                'application/json',
-            },
-
-            cache: 'no-store',
-          },
-        );
-
-      if (!response.ok) {
-
-        throw new Error(
-          `Ürün bulunamadı: ${id}`,
-        );
-      }
-
-      return await response.json();
-
+      const response = await api.get(`/products/${id}`);
+      return response.data;
     } catch (error) {
-
-      console.error(
-        'API Hatası:',
-        error,
-      );
-
+      console.error(`Ürün (${id}) getirilirken API Hatası:`, error);
       return null;
     }
   },
 
-  // Yeni ürün oluştur
-  create: async (
-    payload: any,
-  ) => {
-
+  // 3. Yeni ürün oluştur (payload 'any' tipinden kurtarıldı)
+  create: async (payload: ProductPayload) => {
     try {
-
-      const response =
-        await fetch(
-          `${API_URL}/products`,
-          {
-            method: 'POST',
-
-            headers: {
-              'Content-Type':
-                'application/json',
-            },
-
-            body: JSON.stringify(
-              payload,
-            ),
-          },
-        );
-
-      if (!response.ok) {
-
-        throw new Error(
-          `Ürün oluşturulamadı: ${response.status}`,
-        );
-      }
-
-      return await response.json();
-
+      const response = await api.post('/products', payload);
+      return response.data;
     } catch (error) {
-
-      console.error(
-        'API Hatası:',
-        error,
-      );
-
+      console.error('Ürün oluşturulurken API Hatası:', error);
       return null;
     }
   },
