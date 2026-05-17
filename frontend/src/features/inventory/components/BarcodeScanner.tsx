@@ -3,7 +3,11 @@
 import React, { useEffect, useRef, useState } from 'react';
 import CameraButton from './CameraButton';
 
-export default function BarcodeScanner({ onResult }: any) {
+interface BarcodeScannerProps {
+  onResult: (text: string) => void;
+}
+
+export default function BarcodeScanner({ onResult }: BarcodeScannerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const readerRef = useRef<any>(null);
   const [scanning, setScanning] = useState(false);
@@ -70,7 +74,7 @@ export default function BarcodeScanner({ onResult }: any) {
 
               if (navigator.vibrate) navigator.vibrate(100);
               
-              // Sonucu gönder
+              // Sonucu üst componente pasla (İster raf barkodu olsun, ister ürün)
               onResult(currentText);
 
               // 2 saniye sonra sistemi yeni tarama için hazırla
@@ -106,27 +110,27 @@ export default function BarcodeScanner({ onResult }: any) {
 
       <div style={{ 
         position: 'relative', width: '100%', aspectRatio: '1.8', background: '#000', 
-        borderRadius: '12px', border: '1px solid rgba(255,255,255,0.3)', overflow: 'hidden'
+        borderRadius: '12px', border: '1px solid rgba(255,255,255,0.15)', overflow: 'hidden'
       }}>
         <video ref={videoRef} playsInline style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
 
-        {/* Köşe Çizgileri */}
-        <div style={{ position: 'absolute', top: '15px', left: '15px', width: '20px', height: '20px', borderTop: '3px solid rgba(255,255,255,0.4)', borderLeft: '3px solid rgba(255,255,255,0.4)', borderRadius: '4px 0 0 0' }} />
-        <div style={{ position: 'absolute', top: '15px', right: '15px', width: '20px', height: '20px', borderTop: '3px solid rgba(255,255,255,0.4)', borderRight: '3px solid rgba(255,255,255,0.4)', borderRadius: '0 4px 0 0' }} />
-        <div style={{ position: 'absolute', bottom: '15px', left: '15px', width: '20px', height: '20px', borderBottom: '3px solid rgba(255,255,255,0.4)', borderLeft: '3px solid rgba(255,255,255,0.4)', borderRadius: '0 0 0 4px' }} />
-        <div style={{ position: 'absolute', bottom: '15px', right: '15px', width: '20px', height: '20px', borderBottom: '3px solid rgba(255,255,255,0.4)', borderRight: '3px solid rgba(255,255,255,0.4)', borderRadius: '0 0 4px 0' }} />
+        {/* Köşe Çizgileri - Daha şık ve ince görünüm */}
+        <div style={{ position: 'absolute', top: '15px', left: '15px', width: '20px', height: '20px', borderTop: '2px solid rgba(255,255,255,0.3)', borderLeft: '2px solid rgba(255,255,255,0.3)', borderRadius: '4px 0 0 0' }} />
+        <div style={{ position: 'absolute', top: '15px', right: '15px', width: '20px', height: '20px', borderTop: '2px solid rgba(255,255,255,0.3)', borderRight: '2px solid rgba(255,255,255,0.3)', borderRadius: '0 4px 0 0' }} />
+        <div style={{ position: 'absolute', bottom: '15px', left: '15px', width: '20px', height: '20px', borderBottom: '2px solid rgba(255,255,255,0.3)', borderLeft: '2px solid rgba(255,255,255,0.3)', borderRadius: '0 0 0 4px' }} />
+        <div style={{ position: 'absolute', bottom: '15px', right: '15px', width: '20px', height: '20px', borderBottom: '2px solid rgba(255,255,255,0.3)', borderRight: '2px solid rgba(255,255,255,0.3)', borderRadius: '0 0 4px 0' }} />
 
-        {/* Lazer */}
+        {/* Lazer - İnceltildi (1.5px -> 1px) ve Şeffaflığı Ayarlandı (0.4 -> 0.35) */}
         {scanning && !processing && (
           <div style={{ 
-            position: 'absolute', left: '12%', right: '12%', height: '1.5px', background: 'rgba(255, 0, 0, 0.4)',
-            boxShadow: '0 0 10px 1px rgba(255, 0, 0, 0.4)', zIndex: 10, animation: 'scanMove 3s ease-in-out infinite' 
+            position: 'absolute', left: '12%', right: '12%', height: '1px', background: 'rgba(255, 0, 0, 0.35)',
+            boxShadow: '0 0 8px 1px rgba(255, 0, 0, 0.35)', zIndex: 10, animation: 'scanMove 2.5s ease-in-out infinite' 
           }} />
         )}
 
         {/* İşleniyor Ekranı */}
         {processing && (
-          <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(2px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 20 }}>
+          <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(3px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 20 }}>
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
               <span style={{ color: '#fff', fontSize: '13px', fontWeight: '600', letterSpacing: '2px' }}>İŞLENİYOR</span>
               <div style={{ width: '30px', height: '2px', background: '#ff0000' }}></div>
