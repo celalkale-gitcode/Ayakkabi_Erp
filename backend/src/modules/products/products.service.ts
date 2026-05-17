@@ -2,6 +2,7 @@ import {
   Injectable,
   ConflictException,
   NotFoundException,
+  BadRequestException, // YENİ EKLENDİ
 } from '@nestjs/common';
 import { PrismaService } from '../../core/database/prisma.service';
 import { CreateProductDto } from './dto/create-product.dto';
