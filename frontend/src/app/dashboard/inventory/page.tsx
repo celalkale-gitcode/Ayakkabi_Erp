@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import styles from './inventory.module.css'; 
 import ProductDetailCard from '@/features/inventory/components/ProductDetailCard'; 
 import QuantityInputCard from '@/features/inventory/components/QuantityInputCard';
@@ -15,9 +15,12 @@ export default function InventoryPage() {
   const [activeTab, setActiveTab] = useState<TabType>('scan');
   const [isLoading, setIsLoading] = useState<boolean>(false);
   
-  // YENİ: Terminal tarafından en son okutulan ÜRÜN barkodunu hafızada tutar
+  // DİNAMİK ÜRÜN BİLGİSİ STATE'LERİ
   const [lastScannedProductBarcode, setLastScannedProductBarcode] = useState<string>('');
+  const [dbProductInfo, setDbProductInfo] = useState<{ urunAdi: string; sku: string } | null>(null);
 
+  // DONANIM KORUMASI: El terminali Enter bastığında React state'i kaybetmesin diye Ref kullanıyoruz
+  const activeLocationRef = useRef<any>(null);
   const { 
     scannedItems, 
     activeLocation, 
@@ -25,40 +28,83 @@ export default function InventoryPage() {
     setActiveLocation 
   } = useInventoryStore();
 
+  // Zustand Store ile Ref senkronizasyonu
+  useEffect(() => {
+    activeLocationRef.current = activeLocation;
+  }, [activeLocation]);
+
   // Barkod Okunduğunda Çalışan Ana Fonksiyon
   const handleBarcodeResult = async (barcode: string) => {
-    const cleanBarcode = barcode.trim().toUpperCase();
+    if (!barcode) return;
+    const cleanBarcode = barcode.replace(/[\n\r\t]/g, '').trim().toUpperCase();
+    if (!cleanBarcode) return;
 
-    // 1. ADIM: Eğer henüz raf konumu seçilmediyse, okutulan ilk barkodu RAF BARKODU kabul et
-    if (!activeLocation) {
+    // 1. ADIM: EĞER HENÜZ RAF SEÇİLMEDİYSE (İLK TARAMA RAF KABUL EDİLİR)
+    if (!activeLocationRef.current) {
       setIsLoading(true);
       try {
-        // Not: Gerçek senaryoda burası api.getSuggestedLocation(cleanBarcode) ile beslenebilir.
-        setActiveLocation({
-          id: '66d8b14d-76d1-4b68-a232-d2b5e525c8ff', 
-          konumKodu: cleanBarcode.includes('DP1') ? cleanBarcode : 'DP1-A-R12-03-02-010',
-          tanimliBeden: '42',
+        // ARKA PLAN ENTEGRASYONU: Ham barkod metnini doğrudan konum kodu yapıyoruz
+        // Backend'deki yeni servisimiz OR bloğu sayesinde bu string'i otomatik tanıyacak.
+        const detectedLocation = {
+          id: cleanBarcode, // Backend 'konumKodu' alanı ile eşleşecek ham string
+          konumKodu: cleanBarcode,
+          tanimliBeden: 'Belirleniyor...',
           isFull: false,
-          checkDigit: '5' 
-        });
+          checkDigit: cleanBarcode.slice(-1) // Son karakter kontrol karakteri varsayımı
+        };
         
+        activeLocationRef.current = detectedLocation;
+        setActiveLocation(detectedLocation);
         setActiveTab('scan');
       } catch (err) {
-        console.error('Raf konumu çözümlenirken hata oluştu:', err);
+        console.error('Raf konumu işlenirken hata:', err);
       } finally {
         setIsLoading(false);
       }
       return;
     }
 
-    // 2. ADIM: Raf zaten seçiliyse, bu okutulan barkod bir ÜRÜN BARKODUDUR.
-    setLastScannedProductBarcode(cleanBarcode); // Okunan barkodu kaydet
-    setActiveTab('quantity'); // Miktar giriş ekranını aç
+    // 2. ADIM: RAF ZATEN SEÇİLİYSE (BU BİR ÜRÜN BARKODUDUR)
+    setIsLoading(true);
+    try {
+      setLastScannedProductBarcode(cleanBarcode);
+      
+      // DİNAMİK VERİ ÇEKME: Akıllı yer önerisi endpoint'ini tetikleyerek 
+      // veritabanındaki gerçek ürünün varyant/ürün adına ulaşıyoruz
+      const productData = await inventoryApi.suggestLocation(cleanBarcode);
+      
+      if (productData && productData.success !== false) {
+        setDbProductInfo({
+          // Not: Backend suggest API'nize ürün adı alanını eklemediyseniz default yedek isim basar
+          urunAdi: productData.urunAdi || `SKU: ${productData.sku || 'Ayakkabı Varyantı'}`,
+          sku: productData.sku || cleanBarcode
+        });
+      } else {
+        // Ürün sistemde yoksa veya manuel giriş gerekliyse
+        setDbProductInfo({
+          urunAdi: "Bilinmeyen Ürün (Sistemde Kayıtlı Değil)",
+          sku: cleanBarcode
+        });
+      }
+      
+      // Ürün başarıyla okunduktan sonra miktar giriş ekranına yönlendir
+      setActiveTab('quantity');
+    } catch (error) {
+      console.error("Ürün bilgileri veritabanından çekilemedi:", error);
+      setDbProductInfo({ urunAdi: "Okuma Hatası (Veritabanı Bağlantısı)", sku: cleanBarcode });
+      setActiveTab('quantity');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   // Miktar onaylandığında veritabanına kaydeden fonksiyon
-  const handleOnayla = async () => {
-    if (!activeLocation || !lastScannedProductBarcode) {
+  const handleOnayla = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault(); // Form yenilenmesini engelle (Terminal Enter koruması)
+
+    const currentLoc = activeLocationRef.current;
+
+    if (!currentLoc || !lastScannedProductBarcode) {
       alert('Hata: Aktif raf veya taranmış ürün barkodu bulunamadı!');
       return;
     }
@@ -67,29 +113,30 @@ export default function InventoryPage() {
     try {
       const numericQuantity = parseInt(miktar) || 1;
 
-      // KRİTİK DÜZELTME: Mock veri yerine taranan gerçek barkod ve aktif konum backend'e gönderiliyor
+      // Backend'deki yeni processScan metoduna verileri gönderiyoruz
       const response = await inventoryApi.scanBarcode(
-        lastScannedProductBarcode, // Gerçek Ürün Barkodu
-        numericQuantity,           // Girilen Adet
-        activeLocation.id          // Aktif Rafın ID'si
+        lastScannedProductBarcode, // Ham ürün barkodu (Örn: 869...)
+        numericQuantity,           // Girilen adet
+        currentLoc.konumKodu       // Ham konum kodu (Örn: DP1-A-...)
       );
       
-      // Zustand global state listesine ekle (Arayüzde anlık listelenmesi için)
+      // Zustand global listesine ekle
       addScannedItem({
-        sku: response?.sku || lastScannedProductBarcode, // Backend'den dönen SKU yoksa barkodu bas
-        yeniStok: response?.yeniStok || numericQuantity,
+        sku: response?.sku || dbProductInfo?.sku || lastScannedProductBarcode,
+        yeniStok: response?.raftakiYeniStok || numericQuantity,
         miktar: numericQuantity,
-        konumKodu: activeLocation.konumKodu,
+        konumKodu: currentLoc.konumKodu,
         barkod: lastScannedProductBarcode
       });
 
-      // Temizlik ve Reset adımları
+      // Başarılı işlem sonrası formu ve hafızayı temizleme
       setMiktar('1');
-      setLastScannedProductBarcode(''); // Ürün barkodunu sıfırla (Yeni ürün için)
-      setActiveTab('scan'); // Tarama ekranına geri dön
+      setLastScannedProductBarcode('');
+      setDbProductInfo(null);
+      setActiveTab('scan'); // Tarama ekranına temiz dönüş yap
     } catch (error: any) {
       console.error('Veritabanı kayıt hatası:', error);
-      alert(error?.message || 'Ürün veritabanına işlenirken bir hata oluştu.');
+      alert(error?.response?.data?.message || error?.message || 'Ürün veritabanına işlenirken bir hata oldu.');
     } finally {
       setIsLoading(false);
     }
@@ -141,19 +188,22 @@ export default function InventoryPage() {
 
           {activeTab === 'detail' && (
             <ProductDetailCard 
-              urunAdi="KLASİK DERİ KUNDURA - KALE" 
+              // DÜZELTME: Veritabanındaki gerçek eşleşen ürün ismi karta basılıyor
+              urunAdi={dbProductInfo?.urunAdi || "Taranan Ürün Detayı Yükleniyor..."} 
               lokasyon={activeLocation?.konumKodu || '-'} 
               raf={activeLocation?.konumKodu.split('-').pop() || '-'} 
             />
           )}
 
           {activeTab === 'quantity' && (
-            <QuantityInputCard 
-              mevcutStok={activeLocation ? 12 : 0} 
-              miktar={miktar} 
-              setMiktar={setMiktar} 
-              onOnayla={handleOnayla} 
-            />
+            <form onSubmit={handleOnayla}>
+              <QuantityInputCard 
+                mevcutStok={activeLocation ? 12 : 0} 
+                miktar={miktar} 
+                setMiktar={setMiktar} 
+                onOnayla={handleOnayla} 
+              />
+            </form>
           )}
         </div>
       </div>
