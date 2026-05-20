@@ -40,13 +40,12 @@ export default function BarcodeScanner({ onResult }: BarcodeScannerProps) {
     };
   }, []);
 
-  // Flaş (Torch) Açma / Kapama Fonksiyonu (Düzeltildi)
+  // Flaş (Torch) Açma / Kapama Fonksiyonu
   const toggleFlash = async (turnOn: boolean) => {
     setFlashOn(turnOn);
     if (!videoRef.current || !scanning) return;
     
     try {
-      // @zxing/library arka planda kendi stream'ini yönettiği için doğrudan video elementinden track çekiyoruz
       const stream = videoRef.current.srcObject as MediaStream;
       if (!stream) return;
 
@@ -55,7 +54,6 @@ export default function BarcodeScanner({ onResult }: BarcodeScannerProps) {
 
       const capabilities = videoTrack.getCapabilities() as any;
       
-      // Tarayıcının flaşı destekleyip desteklemediğini kontrol et
       if (capabilities && capabilities.torch) {
         await videoTrack.applyConstraints({
           advanced: [{ torch: turnOn }]
@@ -74,7 +72,6 @@ export default function BarcodeScanner({ onResult }: BarcodeScannerProps) {
     if (scanning) {
       if (readerRef.current) readerRef.current.reset();
       setFlashOn(false); 
-      // Kameranın kapanıp cihazın yeni izne hazır olması için kısa bir bekleme süresi
       setTimeout(() => start(camera), 150);
     }
   };
@@ -100,8 +97,6 @@ export default function BarcodeScanner({ onResult }: BarcodeScannerProps) {
         constraints,
         videoRef.current,
         (result: any) => {
-          // Kamera başarıyla açıldığında ve ilk kareler oynamaya başladığında 
-          // eğer kullanıcı önceden flaşı açtıysa flaş durumunu kameraya senkronize et
           if (videoRef.current && flashOn) {
             toggleFlash(true);
           }
@@ -167,28 +162,30 @@ export default function BarcodeScanner({ onResult }: BarcodeScannerProps) {
         <div style={{ position: 'absolute', bottom: '15px', left: '15px', width: '20px', height: '20px', borderBottom: '2px solid rgba(255,255,255,0.3)', borderLeft: '2px solid rgba(255,255,255,0.3)', borderRadius: '0 0 0 4px' }} />
         <div style={{ position: 'absolute', bottom: '15px', right: '15px', width: '20px', height: '20px', borderBottom: '2px solid rgba(255,255,255,0.3)', borderRight: '2px solid rgba(255,255,255,0.3)', borderRadius: '0 0 4px 0' }} />
 
-        {/* YENİ MİLİMETRİK KONUMLANDIRMA PANELİ */}
+        {/* GÜNCEL MİLİMETRİK KONUMLANDIRMA PANELİ */}
         {!processing && (
           <>
-            {/* SOL ÜST: FlashButton (1mm yukarısı ve 1mm solu -> top: 4px, left: 4px) */}
-            <div style={{ position: 'absolute', top: '4px', left: '4px', zIndex: 30 }}>
-              <FlashButton 
-                flashOn={flashOn} 
-                turnOn={() => toggleFlash(true)} 
-                turnOff={() => toggleFlash(false)} 
-              />
-            </div>
+            {/* SOL ÜST: FlashButton (Köşeden 1mm içeride) */}
+            {scanning && (
+              <div style={{ position: 'absolute', top: '4px', left: '4px', zIndex: 30 }}>
+                <FlashButton 
+                  flashOn={flashOn} 
+                  turnOn={() => toggleFlash(true)} 
+                  turnOff={() => toggleFlash(false)} 
+                />
+              </div>
+            )}
 
-            {/* SAĞ ÜST: SwitchCameraButton (1mm yukarıda, CameraButton ile arasında tam 1mm (4px) mesafe var) */}
-            {/* Hesaplama: Sağ kenardan 4px boşluk + 34px buton genişliği + 4px ara mesafe = right: 42px */}
-            <div style={{ position: 'absolute', top: '4px', right: '42px', zIndex: 30 }}>
+            {/* SAĞ ÜST: Kamera Değiştirme Butonu (Ana buton ile arasında tam 2mm (8px) mesafe var) */}
+            {/* Matematik: 4px sağ kenar boşluğu + 34px ana buton eni + 8px ara boşluk = right: 46px */}
+            <div style={{ position: 'absolute', top: '4px', right: '46px', zIndex: 30 }}>
               <SwitchCameraButton 
                 activeCamera={activeCamera} 
                 onCameraChange={changeCamera} 
               />
             </div>
 
-            {/* SAĞ ÜST: CameraButton (1mm yukarısı ve 1mm sağı -> top: 4px, right: 4px) */}
+            {/* SAĞ ÜST: Ana Kamera Aç/Kapat Butonu (Köşeden 1mm içeride) */}
             <div style={{ position: 'absolute', top: '4px', right: '4px', zIndex: 30 }}>
               <CameraButton scanning={scanning} start={() => start()} stop={stop} />
             </div>
