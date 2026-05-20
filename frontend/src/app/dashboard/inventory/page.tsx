@@ -202,8 +202,9 @@ export default function InventoryPage() {
               )}
             </div>
           ) : (
-            <span className="text-[12px] font-bold font-mono bg-zinc-900/50 px-2.5 py-1 rounded-lg border border-zinc-800 text-zinc-500 animate-pulse">
-              Konum Okutun
+            
+            <span className="text-[12px] font-bold font-mono bg-rose-950/20 px-2.5 py-1 rounded-lg border border-rose-500/20 text-rose-400 animate-pulse">
+             Konum Okutun
             </span>
           )}
         </div>
