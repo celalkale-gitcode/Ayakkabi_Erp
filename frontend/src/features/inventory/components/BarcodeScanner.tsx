@@ -2,6 +2,8 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import CameraButton from './CameraButton';
+import FlashButton from './FlashButton';
+import SwitchCameraButton from './SwitchCameraButton';
 
 interface BarcodeScannerProps {
   onResult: (text: string) => void;
@@ -12,6 +14,10 @@ export default function BarcodeScanner({ onResult }: BarcodeScannerProps) {
   const readerRef = useRef<any>(null);
   const [scanning, setScanning] = useState(false);
   const [processing, setProcessing] = useState(false);
+  
+  // Yeni Eklenen State'ler
+  const [flashOn, setFlashOn] = useState(false);
+  const [activeCamera, setActiveCamera] = useState<'front' | 'back'>('back');
   
   // Güvenlik ve Kilit Mekanizmaları
   const isLocked = useRef<boolean>(false);
@@ -34,7 +40,41 @@ export default function BarcodeScanner({ onResult }: BarcodeScannerProps) {
     };
   }, []);
 
-  const start = async () => {
+  // Flaş (Torch) Açma / Kapama Fonksiyonu
+  const toggleFlash = async (turnOn: boolean) => {
+    setFlashOn(turnOn);
+    if (!videoRef.current || !scanning) return;
+    
+    try {
+      const stream = videoRef.current.srcObject as MediaStream;
+      if (stream) {
+        const videoTrack = stream.getVideoTracks()[0];
+        const capabilities = videoTrack.getCapabilities() as any;
+        
+        // Cihazın flaş desteği var mı kontrol et
+        if (capabilities.torch) {
+          await videoTrack.applyConstraints({
+            advanced: [{ torch: turnOn }]
+          } as any);
+        }
+      }
+    } catch (err) {
+      console.error("Flaş kontrol edilemedi:", err);
+    }
+  };
+
+  // Kamera Değiştirme Fonksiyonu
+  const changeCamera = async (camera: 'front' | 'back') => {
+    setActiveCamera(camera);
+    if (scanning) {
+      // Eğer tarama aktifse, önce mevcut kamerayı durdurup yenisiyle başlatıyoruz
+      if (readerRef.current) readerRef.current.reset();
+      setFlashOn(false); // Kamera değişince flaşı sıfırla
+      setTimeout(() => start(camera), 100);
+    }
+  };
+
+  const start = async (cameraDirection = activeCamera) => {
     if (!videoRef.current || !readerRef.current) return;
     try {
       setScanning(true);
@@ -45,7 +85,7 @@ export default function BarcodeScanner({ onResult }: BarcodeScannerProps) {
 
       const constraints = {
         video: { 
-          facingMode: "environment",
+          facingMode: cameraDirection === "back" ? "environment" : "user",
           width: { ideal: 640 }, 
           height: { ideal: 480 } 
         }
@@ -74,7 +114,7 @@ export default function BarcodeScanner({ onResult }: BarcodeScannerProps) {
 
               if (navigator.vibrate) navigator.vibrate(100);
               
-              // Sonucu üst componente pasla (İster raf barkodu olsun, ister ürün)
+              // Sonucu üst componente pasla
               onResult(currentText);
 
               // 2 saniye sonra sistemi yeni tarama için hazırla
@@ -97,6 +137,7 @@ export default function BarcodeScanner({ onResult }: BarcodeScannerProps) {
   const stop = () => {
     if (readerRef.current) readerRef.current.reset();
     setScanning(false);
+    setFlashOn(false); // Tarama durunca flaşı da kapatıyoruz
     isLocked.current = false;
     lastResult.current = "";
     confirmationCount.current = 0;
@@ -114,13 +155,40 @@ export default function BarcodeScanner({ onResult }: BarcodeScannerProps) {
       }}>
         <video ref={videoRef} playsInline style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
 
-        {/* Köşe Çizgileri - Daha şık ve ince görünüm */}
+        {/* Köşe Çizgileri */}
         <div style={{ position: 'absolute', top: '15px', left: '15px', width: '20px', height: '20px', borderTop: '2px solid rgba(255,255,255,0.3)', borderLeft: '2px solid rgba(255,255,255,0.3)', borderRadius: '4px 0 0 0' }} />
         <div style={{ position: 'absolute', top: '15px', right: '15px', width: '20px', height: '20px', borderTop: '2px solid rgba(255,255,255,0.3)', borderRight: '2px solid rgba(255,255,255,0.3)', borderRadius: '0 4px 0 0' }} />
         <div style={{ position: 'absolute', bottom: '15px', left: '15px', width: '20px', height: '20px', borderBottom: '2px solid rgba(255,255,255,0.3)', borderLeft: '2px solid rgba(255,255,255,0.3)', borderRadius: '0 0 0 4px' }} />
         <div style={{ position: 'absolute', bottom: '15px', right: '15px', width: '20px', height: '20px', borderBottom: '2px solid rgba(255,255,255,0.3)', borderRight: '2px solid rgba(255,255,255,0.3)', borderRadius: '0 0 4px 0' }} />
 
-        {/* Lazer - İnceltildi (1.5px -> 1px) ve Şeffaflığı Ayarlandı (0.4 -> 0.35) */}
+        {/* ÜST KONTROL PANELİ VE MİLİMETRİK YERLEŞİMLER */}
+        {!processing && (
+          <>
+            {/* SOL ÜST: Flaş Butonu (Köşeden 2mm (~8px) içeride) */}
+            <div style={{ position: 'absolute', top: '8px', left: '8px', zIndex: 30 }}>
+              <FlashButton 
+                flashOn={flashOn} 
+                turnOn={() => toggleFlash(true)} 
+                turnOff={() => toggleFlash(false)} 
+              />
+            </div>
+
+            {/* SAĞ ÜST: Kamera Değiştirme Butonu (Genişlik hesabı ile Kamera butonunun hemen solunda) */}
+            <div style={{ position: 'absolute', top: '8px', right: '50px', zIndex: 30 }}>
+              <SwitchCameraButton 
+                activeCamera={activeCamera} 
+                onCameraChange={changeCamera} 
+              />
+            </div>
+
+            {/* SAĞ ÜST: Ana Kamera Aç/Kapat Butonu (Köşeden 2mm (~8px) içeride) */}
+            <div style={{ position: 'absolute', top: '8px', right: '8px', zIndex: 30 }}>
+              <CameraButton scanning={scanning} start={() => start()} stop={stop} />
+            </div>
+          </>
+        )}
+
+        {/* Lazer */}
         {scanning && !processing && (
           <div style={{ 
             position: 'absolute', left: '12%', right: '12%', height: '1px', background: 'rgba(255, 0, 0, 0.35)',
@@ -137,8 +205,6 @@ export default function BarcodeScanner({ onResult }: BarcodeScannerProps) {
             </div>
           </div>
         )}
-
-        {!processing && <CameraButton scanning={scanning} start={start} stop={stop} />}
       </div>
     </div>
   );
