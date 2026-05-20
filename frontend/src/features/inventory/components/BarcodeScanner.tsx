@@ -15,14 +15,14 @@ export default function BarcodeScanner({ onResult }: BarcodeScannerProps) {
   const [scanning, setScanning] = useState(false);
   const [processing, setProcessing] = useState(false);
   
-  // Yeni Eklenen State'ler
+  // State Yönetimleri
   const [flashOn, setFlashOn] = useState(false);
   const [activeCamera, setActiveCamera] = useState<'front' | 'back'>('back');
   
   // Güvenlik ve Kilit Mekanizmaları
   const isLocked = useRef<boolean>(false);
-  const lastResult = useRef<string>(""); // Son okunan geçici kod
-  const confirmationCount = useRef<number>(0); // Kaç kez üst üste okunduğu
+  const lastResult = useRef<string>(""); 
+  const confirmationCount = useRef<number>(0);
 
   useEffect(() => {
     const loadScanner = async () => {
@@ -40,26 +40,31 @@ export default function BarcodeScanner({ onResult }: BarcodeScannerProps) {
     };
   }, []);
 
-  // Flaş (Torch) Açma / Kapama Fonksiyonu
+  // Flaş (Torch) Açma / Kapama Fonksiyonu (Düzeltildi)
   const toggleFlash = async (turnOn: boolean) => {
     setFlashOn(turnOn);
     if (!videoRef.current || !scanning) return;
     
     try {
+      // @zxing/library arka planda kendi stream'ini yönettiği için doğrudan video elementinden track çekiyoruz
       const stream = videoRef.current.srcObject as MediaStream;
-      if (stream) {
-        const videoTrack = stream.getVideoTracks()[0];
-        const capabilities = videoTrack.getCapabilities() as any;
-        
-        // Cihazın flaş desteği var mı kontrol et
-        if (capabilities.torch) {
-          await videoTrack.applyConstraints({
-            advanced: [{ torch: turnOn }]
-          } as any);
-        }
+      if (!stream) return;
+
+      const videoTrack = stream.getVideoTracks()[0];
+      if (!videoTrack) return;
+
+      const capabilities = videoTrack.getCapabilities() as any;
+      
+      // Tarayıcının flaşı destekleyip desteklemediğini kontrol et
+      if (capabilities && capabilities.torch) {
+        await videoTrack.applyConstraints({
+          advanced: [{ torch: turnOn }]
+        } as any);
+      } else {
+        console.warn("Bu cihazda veya kamerada flaş (torch) desteği bulunamadı.");
       }
     } catch (err) {
-      console.error("Flaş kontrol edilemedi:", err);
+      console.error("Flaş tetiklenirken hata oluştu:", err);
     }
   };
 
@@ -67,10 +72,10 @@ export default function BarcodeScanner({ onResult }: BarcodeScannerProps) {
   const changeCamera = async (camera: 'front' | 'back') => {
     setActiveCamera(camera);
     if (scanning) {
-      // Eğer tarama aktifse, önce mevcut kamerayı durdurup yenisiyle başlatıyoruz
       if (readerRef.current) readerRef.current.reset();
-      setFlashOn(false); // Kamera değişince flaşı sıfırla
-      setTimeout(() => start(camera), 100);
+      setFlashOn(false); 
+      // Kameranın kapanıp cihazın yeni izne hazır olması için kısa bir bekleme süresi
+      setTimeout(() => start(camera), 150);
     }
   };
 
@@ -95,29 +100,30 @@ export default function BarcodeScanner({ onResult }: BarcodeScannerProps) {
         constraints,
         videoRef.current,
         (result: any) => {
+          // Kamera başarıyla açıldığında ve ilk kareler oynamaya başladığında 
+          // eğer kullanıcı önceden flaşı açtıysa flaş durumunu kameraya senkronize et
+          if (videoRef.current && flashOn) {
+            toggleFlash(true);
+          }
+
           if (result && !isLocked.current) {
             const currentText = result.getText();
             
-            // PEŞ PEŞE DOĞRULAMA KONTROLÜ
             if (currentText === lastResult.current) {
               confirmationCount.current += 1;
             } else {
               lastResult.current = currentText;
               confirmationCount.current = 1;
-              return; // Henüz emin değiliz, sonraki kareye bak
+              return; 
             }
 
-            // Eğer arka arkaya 3 kez aynı sonucu yakaladıysak:
             if (confirmationCount.current >= 3) {
               isLocked.current = true; 
               setProcessing(true); 
 
               if (navigator.vibrate) navigator.vibrate(100);
-              
-              // Sonucu üst componente pasla
               onResult(currentText);
 
-              // 2 saniye sonra sistemi yeni tarama için hazırla
               setTimeout(() => {
                 setProcessing(false);
                 isLocked.current = false;
@@ -137,7 +143,7 @@ export default function BarcodeScanner({ onResult }: BarcodeScannerProps) {
   const stop = () => {
     if (readerRef.current) readerRef.current.reset();
     setScanning(false);
-    setFlashOn(false); // Tarama durunca flaşı da kapatıyoruz
+    setFlashOn(false); 
     isLocked.current = false;
     lastResult.current = "";
     confirmationCount.current = 0;
@@ -161,11 +167,11 @@ export default function BarcodeScanner({ onResult }: BarcodeScannerProps) {
         <div style={{ position: 'absolute', bottom: '15px', left: '15px', width: '20px', height: '20px', borderBottom: '2px solid rgba(255,255,255,0.3)', borderLeft: '2px solid rgba(255,255,255,0.3)', borderRadius: '0 0 0 4px' }} />
         <div style={{ position: 'absolute', bottom: '15px', right: '15px', width: '20px', height: '20px', borderBottom: '2px solid rgba(255,255,255,0.3)', borderRight: '2px solid rgba(255,255,255,0.3)', borderRadius: '0 0 4px 0' }} />
 
-        {/* ÜST KONTROL PANELİ VE MİLİMETRİK YERLEŞİMLER */}
+        {/* YENİ MİLİMETRİK KONUMLANDIRMA PANELİ */}
         {!processing && (
           <>
-            {/* SOL ÜST: Flaş Butonu (Köşeden 2mm (~8px) içeride) */}
-            <div style={{ position: 'absolute', top: '8px', left: '8px', zIndex: 30 }}>
+            {/* SOL ÜST: FlashButton (1mm yukarısı ve 1mm solu -> top: 4px, left: 4px) */}
+            <div style={{ position: 'absolute', top: '4px', left: '4px', zIndex: 30 }}>
               <FlashButton 
                 flashOn={flashOn} 
                 turnOn={() => toggleFlash(true)} 
@@ -173,16 +179,17 @@ export default function BarcodeScanner({ onResult }: BarcodeScannerProps) {
               />
             </div>
 
-            {/* SAĞ ÜST: Kamera Değiştirme Butonu (Genişlik hesabı ile Kamera butonunun hemen solunda) */}
-            <div style={{ position: 'absolute', top: '8px', right: '50px', zIndex: 30 }}>
+            {/* SAĞ ÜST: SwitchCameraButton (1mm yukarıda, CameraButton ile arasında tam 1mm (4px) mesafe var) */}
+            {/* Hesaplama: Sağ kenardan 4px boşluk + 34px buton genişliği + 4px ara mesafe = right: 42px */}
+            <div style={{ position: 'absolute', top: '4px', right: '42px', zIndex: 30 }}>
               <SwitchCameraButton 
                 activeCamera={activeCamera} 
                 onCameraChange={changeCamera} 
               />
             </div>
 
-            {/* SAĞ ÜST: Ana Kamera Aç/Kapat Butonu (Köşeden 2mm (~8px) içeride) */}
-            <div style={{ position: 'absolute', top: '8px', right: '8px', zIndex: 30 }}>
+            {/* SAĞ ÜST: CameraButton (1mm yukarısı ve 1mm sağı -> top: 4px, right: 4px) */}
+            <div style={{ position: 'absolute', top: '4px', right: '4px', zIndex: 30 }}>
               <CameraButton scanning={scanning} start={() => start()} stop={stop} />
             </div>
           </>
